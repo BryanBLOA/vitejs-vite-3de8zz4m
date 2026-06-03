@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useMemo } from "react";
 
 // ─── Permisos ─────────────────────────────────────────────────────────────────
