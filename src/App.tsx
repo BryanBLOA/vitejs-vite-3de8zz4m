@@ -1,10 +1,8 @@
-// @ts-nocheck
-
 import { useState, useRef, useMemo } from "react";
 
 // ─── Permisos ─────────────────────────────────────────────────────────────────
 const BASE_PERMS = {
-  "Administrador":       ["dashboard","patients","appointments","calendar","shifts","beds","icu","surgery","assign_surgery","lab","pharmacy","inventory","suppliers","payments","reports","staff","roles","meds_dose","returns","alerts","clinics","consultations","prescriptions"],
+  "Administrador":       ["dashboard","patients","appointments","calendar","shifts","beds","icu","surgery","assign_surgery","lab","pharmacy","inventory","suppliers","payments","reports","staff","roles","meds_dose","returns","alerts","clinics","consultations","prescriptions","maintenance"],
   "Médico":              ["dashboard","patients","appointments","calendar","lab","consultations","prescriptions"],
   "Médico+Cirugía":      ["dashboard","patients","appointments","calendar","surgery","assign_surgery","lab","consultations","prescriptions"],
   "Enfermera/o":         ["dashboard","patients","beds","meds_dose"],
@@ -47,6 +45,7 @@ const MODULES = [
   { id:"staff",          label:"Personal",         icon:"🩺" },
   { id:"roles",          label:"Roles / Usuarios", icon:"🔐" },
   { id:"meds_dose",      label:"Medicación/Dosis", icon:"🩹" },
+  { id:"maintenance",    label:"Mantenimiento",    icon:"⚙️" },
 ];
 const EMPLOYEE_CATEGORIES = ["Médico","Técnico de Laboratorio","Enfermera/o","Farmacéutico","Camillero","Recepcionista","Administrador","Limpieza","Radiólogo","Nutricionista","Secretaria/o"];
 const SHIFT_NAMES = ["Mañana (07:00–15:00)","Tarde (15:00–23:00)","Noche (23:00–07:00)","Completo (07:00–19:00)","Especial"];
@@ -1535,40 +1534,291 @@ function Reports({data}){
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// MANTENIMIENTO — configuración del hospital
+// ══════════════════════════════════════════════════════════════════════════════
+function Maintenance({hospital,setHospital}){
+  const [form,setForm]=useState({...hospital});
+  const [saved,setSaved]=useState(false);
+  const logoRef=useRef();
+
+  const handleLogo=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>setForm(p=>({...p,logo:ev.target.result}));r.readAsDataURL(f);
+  };
+  const save=()=>{
+    setHospital(form);
+    localStorage.setItem("hospital_config",JSON.stringify(form));
+    setSaved(true);setTimeout(()=>setSaved(false),2500);
+  };
+
+  return(
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Configuración del Hospital</h2>
+        <p className="text-slate-500 text-sm mt-1">Solo el Administrador puede modificar esta información.</p>
+      </div>
+
+      {saved&&<div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 text-emerald-700 font-bold flex items-center gap-2">✅ Cambios guardados correctamente</div>}
+
+      {/* Logo */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-4">
+        <h3 className="font-bold text-slate-700 text-base">Logo del Hospital</h3>
+        <div className="flex items-center gap-5">
+          {form.logo
+            ?<img src={form.logo} alt="logo" className="w-24 h-24 rounded-2xl object-contain border-2 border-slate-200 shadow bg-slate-50"/>
+            :<div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-3xl font-black shadow">{form.name?.[0]||"H"}</div>
+          }
+          <div className="space-y-2">
+            <button onClick={()=>logoRef.current.click()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow transition-colors">{form.logo?"Cambiar logo":"Subir logo"}</button>
+            {form.logo&&<button onClick={()=>setForm(p=>({...p,logo:null}))} className="block px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-sm font-bold transition-colors">Quitar logo</button>}
+            <p className="text-xs text-slate-400">PNG, JPG o SVG recomendado</p>
+          </div>
+        </div>
+        <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogo}/>
+      </div>
+
+      {/* Información */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-4">
+        <h3 className="font-bold text-slate-700 text-base">Información del Hospital</h3>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Nombre del hospital</label>
+            <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full" placeholder="ej. Hospital General de Guatemala"/>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Eslogan</label>
+            <input value={form.slogan} onChange={e=>setForm(p=>({...p,slogan:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full" placeholder="ej. Tu salud es nuestra misión"/>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Descripción</label>
+            <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full resize-none" placeholder="Descripción breve del hospital..."/>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Teléfono</label>
+              <input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. 2234-5678"/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Correo</label>
+              <input type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="info@hospital.gt"/>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Dirección</label>
+            <input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. 6a Avenida, Zona 1, Guatemala"/>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Versión del sistema</label>
+              <input value={form.version} onChange={e=>setForm(p=>({...p,version:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. v5.0"/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Color primario</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={form.primaryColor||"#0f2a56"} onChange={e=>setForm(p=>({...p,primaryColor:e.target.value}))} className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"/>
+                <span className="text-sm text-slate-600 font-mono">{form.primaryColor||"#0f2a56"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Vista previa */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-3">
+        <h3 className="font-bold text-slate-700 text-base">Vista previa del sidebar</h3>
+        <div className="rounded-2xl p-4 flex items-center gap-3" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
+          {form.logo
+            ?<img src={form.logo} className="w-10 h-10 rounded-xl object-contain bg-white p-1"/>
+            :<div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-black" style={{background:form.primaryColor||"#1d4ed8"}}>{form.name?.[0]||"H"}</div>
+          }
+          <div>
+            <p className="font-extrabold text-white text-sm">{form.name||"HospitalSYS"}</p>
+            <p className="text-xs text-blue-300">{form.slogan||"v5.0 — Guatemala"}</p>
+          </div>
+        </div>
+      </div>
+
+      <button onClick={save} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-lg transition-colors">💾 Guardar cambios</button>
+
+      {/* Info sobre dónde se guardan los datos */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+        <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">ℹ️ ¿Dónde se guarda la información?</p>
+        <p className="text-xs text-slate-500">Los datos se guardan en <strong>localStorage</strong> del navegador. Esto significa que persisten aunque cierres el navegador, pero son locales a este dispositivo/navegador.</p>
+        <p className="text-xs text-slate-500">Para una base de datos en la nube (acceso desde múltiples dispositivos), se recomienda integrar <strong>Firebase Firestore</strong> o <strong>Supabase</strong>.</p>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PANTALLA DE LOGIN
+// ══════════════════════════════════════════════════════════════════════════════
+function LoginScreen({onLogin,hospital}){
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [error,setError]=useState("");
+  const [showPass,setShowPass]=useState(false);
+
+  // Contraseñas por defecto (en producción usar hash)
+  const PASSWORDS={
+    "admin@hospital.gt":"admin123",
+    "rmenendez@hospital.gt":"doctor123",
+    "atorres@hospital.gt":"doctor123",
+    "lcifuentes@hospital.gt":"doctor123",
+    "sperez@hospital.gt":"enfermera123",
+    "lbarrera@hospital.gt":"secretaria123",
+    "jramirez@hospital.gt":"lab123",
+    "mgodinez@hospital.gt":"farmacia123",
+  };
+
+  const handleLogin=e=>{
+    e.preventDefault();
+    const correct=PASSWORDS[email.trim().toLowerCase()];
+    if(!correct){setError("Usuario no encontrado");return;}
+    if(correct!==password){setError("Contraseña incorrecta");return;}
+    setError("");
+    onLogin(email.trim().toLowerCase());
+  };
+
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:"linear-gradient(135deg,#0a1f44 0%,#0f2a56 50%,#0d3272 100%)"}}>
+      <div className="w-full max-w-md space-y-6">
+
+        {/* Logo / nombre hospital */}
+        <div className="text-center space-y-3">
+          {hospital.logo
+            ?<img src={hospital.logo} className="w-20 h-20 mx-auto rounded-2xl object-contain bg-white/10 p-2 shadow-xl"/>
+            :<div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-xl">{hospital.name?.[0]||"H"}</div>
+          }
+          <div>
+            <h1 className="text-2xl font-extrabold text-white">{hospital.name||"HospitalSYS"}</h1>
+            <p className="text-blue-300 text-sm">{hospital.slogan||"Sistema de Gestión Hospitalaria"}</p>
+          </div>
+        </div>
+
+        {/* Formulario */}
+        <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-800">Iniciar sesión</h2>
+            <p className="text-slate-500 text-sm">Ingresa con tu cuenta del hospital</p>
+          </div>
+
+          {error&&<div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm font-semibold flex items-center gap-2">⚠️ {error}</div>}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Correo electrónico</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@hospital.gt" required
+                className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full"/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Contraseña</label>
+              <div className="relative">
+                <input type={showPass?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required
+                  className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full pr-12"/>
+                <button type="button" onClick={()=>setShowPass(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg">{showPass?"🙈":"👁"}</button>
+              </div>
+            </div>
+            <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-base shadow-md transition-colors">Ingresar</button>
+          </form>
+
+          {/* Usuarios de prueba */}
+          <details className="group">
+            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 font-semibold select-none">Ver usuarios de prueba ▾</summary>
+            <div className="mt-3 space-y-1 bg-slate-50 rounded-xl p-3 border border-slate-200">
+              {[
+                ["admin@hospital.gt","admin123","Administrador"],
+                ["rmenendez@hospital.gt","doctor123","Médico"],
+                ["atorres@hospital.gt","doctor123","Médico"],
+                ["sperez@hospital.gt","enfermera123","Enfermera"],
+                ["lbarrera@hospital.gt","secretaria123","Secretaria"],
+                ["jramirez@hospital.gt","lab123","Técnico Lab"],
+                ["mgodinez@hospital.gt","farmacia123","Farmacéutico"],
+              ].map(([u,p,r])=>(
+                <button key={u} onClick={()=>{setEmail(u);setPassword(p);}} className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg transition-colors">
+                  <span className="text-xs font-bold text-blue-700">{r}</span>
+                  <span className="text-xs text-slate-500 ml-2">{u}</span>
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
+
+        {hospital.address&&<p className="text-center text-blue-300/60 text-xs">{hospital.address}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // APP SHELL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function App(){
   const [active,setActive]=useState("dashboard");
   const [sidebar,setSidebar]=useState(true);
-  const [data,setData]=useState(INITIAL_DATA);
-  const SESSION_USER_ID="R001";
-  const sessionUser=data.roles.find(r=>r.id===SESSION_USER_ID)||data.roles[0];
+
+  // ── Persistencia con localStorage ──────────────────────────────────────────
+  const [data,setData]=useState(()=>{
+    try{const s=localStorage.getItem("hospital_data");return s?JSON.parse(s):INITIAL_DATA;}catch{return INITIAL_DATA;}
+  });
+  const [hospital,setHospital]=useState(()=>{
+    try{const s=localStorage.getItem("hospital_config");return s?JSON.parse(s):{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",version:"v5.0",primaryColor:"#0f2a56"};}
+    catch{return{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",version:"v5.0",primaryColor:"#0f2a56"};}
+  });
+
+  // Guarda data en localStorage cada vez que cambia
+  const setDataPersist=newData=>{
+    setData(newData);
+    try{localStorage.setItem("hospital_data",JSON.stringify(newData));}catch{}
+  };
+
+  // ── Autenticación ───────────────────────────────────────────────────────────
+  const [loggedUser,setLoggedUser]=useState(()=>{
+    try{return localStorage.getItem("hospital_session")||null;}catch{return null;}
+  });
+
+  const handleLogin=email=>{
+    setLoggedUser(email);
+    try{localStorage.setItem("hospital_session",email);}catch{}
+  };
+  const handleLogout=()=>{
+    setLoggedUser(null);
+    try{localStorage.removeItem("hospital_session");}catch{}
+  };
+
+  // Si no hay sesión, mostrar login
+  if(!loggedUser){
+    return <LoginScreen onLogin={handleLogin} hospital={hospital}/>;
+  }
+
+  const sessionUser=data.roles.find(r=>r.user===loggedUser)||data.roles[0];
   const userPerms=useMemo(()=>{const base=BASE_PERMS[sessionUser.role]||[];return[...new Set([...base,...(sessionUser.extraPerms||[])])];},[ sessionUser]);
   const alertCount=[...data.pharmacy,...data.inventory].filter(i=>{const el=expiryLevel(i.expiry);return el==="vencido"||el==="critico"||el==="pronto"||(i.stock??i.qty)<i.minStock;}).length+data.returns.filter(r=>r.status==="Pendiente").length;
 
   const views={
     dashboard:<Dashboard data={data} setActive={setActive}/>,
     alerts:<AlertsPanel data={data}/>,
-    patients:<Patients data={data} setData={setData}/>,
-    consultations:<Consultations data={data} setData={setData}/>,
-    prescriptions:<Prescriptions data={data} setData={setData}/>,
-    appointments:<Appointments data={data} setData={setData} userPerms={userPerms}/>,
+    patients:<Patients data={data} setData={setDataPersist}/>,
+    consultations:<Consultations data={data} setData={setDataPersist}/>,
+    prescriptions:<Prescriptions data={data} setData={setDataPersist}/>,
+    appointments:<Appointments data={data} setData={setDataPersist} userPerms={userPerms}/>,
     calendar:<CalendarView data={data}/>,
-    shifts:<Shifts data={data} setData={setData}/>,
-    clinics:<Clinics data={data} setData={setData}/>,
-    beds:<Beds data={data} setData={setData}/>,
+    shifts:<Shifts data={data} setData={setDataPersist}/>,
+    clinics:<Clinics data={data} setData={setDataPersist}/>,
+    beds:<Beds data={data} setData={setDataPersist}/>,
     icu:<ICU data={data}/>,
     surgery:<Surgery data={data}/>,
     lab:<Lab data={data}/>,
     pharmacy:<Pharmacy data={data}/>,
     inventory:<Inventory data={data}/>,
-    returns:<Returns data={data} setData={setData}/>,
-    suppliers:<Suppliers data={data} setData={setData}/>,
-    payments:<Payments data={data} setData={setData}/>,
+    returns:<Returns data={data} setData={setDataPersist}/>,
+    suppliers:<Suppliers data={data} setData={setDataPersist}/>,
+    payments:<Payments data={data} setData={setDataPersist}/>,
     reports:<Reports data={data}/>,
-    staff:<Staff data={data} setData={setData}/>,
-    roles:<Roles data={data} setData={setData}/>,
-    meds_dose:<MedsDose data={data} setData={setData}/>,
+    staff:<Staff data={data} setData={setDataPersist}/>,
+    roles:<Roles data={data} setData={setDataPersist}/>,
+    meds_dose:<MedsDose data={data} setData={setDataPersist}/>,
+    maintenance:<Maintenance hospital={hospital} setHospital={setHospital}/>,
   };
 
   const roleColors2={"Administrador":"bg-violet-600 text-white","Médico":"bg-blue-600 text-white","Enfermera/o":"bg-cyan-600 text-white","Secretaria/o":"bg-rose-500 text-white","Técnico Laboratorio":"bg-emerald-600 text-white","Farmacéutico":"bg-amber-500 text-white"};
@@ -1589,8 +1839,8 @@ export default function App(){
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-sm font-black text-white shrink-0 shadow-lg">H</div>
           {sidebar && (
             <div className="min-w-0">
-              <p className="font-extrabold text-white text-sm leading-tight truncate">HospitalSYS</p>
-              <p className="text-[10px] text-blue-300">v5.0 — Guatemala</p>
+              <p className="font-extrabold text-white text-sm leading-tight truncate">{hospital.name||"HospitalSYS"}</p>
+              <p className="text-[10px] text-blue-300">{hospital.slogan||"v5.0 — Guatemala"}</p>
             </div>
           )}
         </div>
@@ -1661,8 +1911,11 @@ export default function App(){
             {/* Logo */}
             <div className="px-3 py-4 border-b border-white/10 flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-sm font-black text-white shrink-0 shadow-lg">H</div>
-                <div><p className="font-extrabold text-white text-sm leading-tight">HospitalSYS</p><p className="text-[10px] text-blue-300">v5.0</p></div>
+                {hospital.logo
+                  ?<img src={hospital.logo} className="w-8 h-8 rounded-xl object-contain bg-white/10 p-0.5 shrink-0"/>
+                  :<div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 shadow-lg" style={{background:hospital.primaryColor||"#1d4ed8"}}>{hospital.name?.[0]||"H"}</div>
+                }
+                <div><p className="font-extrabold text-white text-sm leading-tight">{hospital.name||"HospitalSYS"}</p><p className="text-[10px] text-blue-300">{hospital.slogan||"v5.0"}</p></div>
               </div>
               <button onClick={()=>setMobileOpen(false)} className="text-blue-300 hover:text-white text-xl font-bold p-1">✕</button>
             </div>
@@ -1722,6 +1975,12 @@ export default function App(){
             <span className="hidden lg:block"><Badge val={sessionUser.role} map={roleColors2}/></span>
             <span className="text-xs text-slate-400 hidden xl:block truncate max-w-36">{sessionUser.user}</span>
             <Avatar photo={sessionUser.photo} name={sessionUser.name} size="sm" gradient="from-blue-600 to-blue-800"/>
+            <button onClick={handleLogout} title="Cerrar sesión"
+              className="p-2 rounded-xl hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+            </button>
           </div>
         </header>
 
