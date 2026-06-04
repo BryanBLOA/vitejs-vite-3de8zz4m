@@ -203,14 +203,14 @@ const Card=({title,value,sub,color,alert})=>(
 const Table=({cols,rows,renderRow})=>(
   <div className="rounded-2xl shadow-md border border-slate-200 overflow-hidden">
     <div className="overflow-x-auto">
-      <table className="w-full text-sm" style={{minWidth:"600px"}}>
-        <thead><tr className="bg-[#0f2a56] text-left">{cols.map(c=><th key={c} className="px-3 py-3 text-xs uppercase tracking-wider text-blue-200 font-bold whitespace-nowrap">{c}</th>)}</tr></thead>
+      <table className="w-full text-sm" style={{minWidth:"600px",tableLayout:"auto"}}>
+        <thead><tr className="bg-[#0f2a56] text-left">{cols.map(c=><th key={c} className="px-3 py-3 text-xs uppercase tracking-wider text-blue-200 font-bold whitespace-nowrap border-r border-blue-900/30 last:border-r-0">{c}</th>)}</tr></thead>
         <tbody className="bg-white divide-y divide-slate-100">{rows.map((r,i)=><tr key={i} className="hover:bg-blue-50 transition-colors">{renderRow(r)}</tr>)}</tbody>
       </table>
     </div>
   </div>
 );
-const TD=({children})=><td className="px-3 py-3 text-slate-700 text-xs sm:text-sm">{children}</td>;
+const TD=({children})=><td className="px-3 py-3 text-slate-700 text-xs sm:text-sm border-r border-slate-100 last:border-r-0">{children}</td>;
 
 function Avatar({photo,name,size="md",gradient="from-blue-600 to-blue-800"}){
   const sz=size==="lg"?"w-20 h-20 text-2xl":size==="sm"?"w-8 h-8 text-xs":"w-12 h-12 text-base";
@@ -506,19 +506,61 @@ function Prescriptions({data,setData,hospital}){
                 <button onClick={()=>openEdit(rx)} className="text-xs bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg font-semibold">Editar</button>
                 <button onClick={()=>{
                   const w=window.open("","_blank");
-                  const h=hospital;
-                  w.document.write(`<html><head><title>Receta ${rx.id}</title><style>body{font-family:sans-serif;padding:24px;max-width:600px;margin:0 auto}h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #ccc;padding-bottom:4px}table{width:100%;border-collapse:collapse}td,th{padding:6px;text-align:left;font-size:13px;border-bottom:1px solid #eee}.header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #0f2a56;padding-bottom:12px;margin-bottom:16px}.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:bold;margin:2px}.ext{background:#fef3c7;color:#92400e}.int{background:#dbeafe;color:#1e40af}@media print{button{display:none}}</style></head><body>
-                  <div class="header">${h.logo?`<img src="${h.logo}" style="width:56px;height:56px;border-radius:12px;object-fit:contain;background:#f1f5f9;padding:4px">`:`<div style="width:56px;height:56px;border-radius:12px;background:#0f2a56;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:900">${h.name?.[0]||"H"}</div>`}
-                  <div><strong style="font-size:18px">${h.name||"HospitalSYS"}</strong>${h.slogan?`<br><em style="color:#64748b;font-size:13px">${h.slogan}</em>`:""} ${h.address?`<br><span style="font-size:12px;color:#94a3b8">${h.address}</span>`:""} ${h.phone?`<br><span style="font-size:12px;color:#94a3b8">Tel: ${h.phone}</span>`:""}</div>
-                  <div style="margin-left:auto;text-align:right"><span style="font-size:12px;color:#94a3b8">Fecha</span><br><strong>${rx.date}</strong></div></div>
+                  const h=hospital||{};
+                  const docStaff=data.staff.find(e=>e.name===rx.doctor||e.id===rx.doctorId);
+                  w.document.write(`<html><head><title>Receta ${rx.id}</title><style>
+                    *{box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:24px;max-width:680px;margin:0 auto;font-size:13px;color:#1e293b}
+                    h1{font-size:18px;font-weight:900;margin:12px 0 4px}h2{font-size:13px;font-weight:800;border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin:14px 0 8px;color:#334155}
+                    table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{padding:7px 10px;text-align:left;font-size:12px;border-bottom:1px solid #f1f5f9}
+                    th{background:#0f2a56;color:#bfdbfe;font-size:11px;font-weight:700}
+                    .header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #0f2a56;padding-bottom:12px;margin-bottom:16px}
+                    .chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;margin:2px}
+                    .ext{background:#fef3c7;color:#92400e}.int{background:#dbeafe;color:#1e40af}
+                    .sig{display:flex;justify-content:space-around;margin-top:40px;flex-wrap:wrap;gap:16px}
+                    .sig-block{text-align:center}.sig-line{border-top:1px solid #334155;min-width:160px;padding-top:6px;font-size:12px;font-weight:700}
+                    .sig-sub{font-size:11px;color:#64748b}
+                    .footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}
+                    @media print{button{display:none!important}}
+                  </style></head><body>
+                  <div class="header">
+                    ${h.logo?`<img src="${h.logo}" style="width:56px;height:56px;border-radius:12px;object-fit:contain;background:#f1f5f9;padding:4px">`:`<div style="width:56px;height:56px;border-radius:12px;background:#0f2a56;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:900">${h.name?.[0]||"H"}</div>`}
+                    <div>
+                      <strong style="font-size:18px">${h.name||"HospitalSYS"}</strong>
+                      ${h.nit?`<br><span style="font-size:11px;color:#64748b">NIT: ${h.nit}</span>`:""}
+                      ${h.slogan?`<br><em style="color:#64748b;font-size:12px">${h.slogan}</em>`:""}
+                      ${h.address?`<br><span style="font-size:11px;color:#94a3b8">${h.address}</span>`:""}
+                      ${h.phone?`<br><span style="font-size:11px;color:#94a3b8">Tel: ${h.phone}</span>`:""}
+                    </div>
+                    <div style="margin-left:auto;text-align:right;flex-shrink:0">
+                      <span style="font-size:11px;color:#94a3b8">Fecha</span><br><strong>${rx.date}</strong>
+                    </div>
+                  </div>
                   <h1>Receta Médica — ${rx.id}</h1>
-                  <table><tr><th>Paciente</th><td>${rx.patient}</td><th>Médico</th><td>${rx.doctor}</td></tr><tr><th>Diagnóstico</th><td colspan="3">${rx.dx}</td></tr></table>
-                  <h2>Medicamentos</h2>
-                  <table><tr style="background:#f8fafc"><th>Medicamento</th><th>Dosis</th><th>Vía</th><th>Frecuencia</th><th>Días</th><th>Tipo</th></tr>
-                  ${rx.items.map(it=>`<tr><td><strong>${it.drug}</strong>${it.notes?`<br><em style="font-size:11px;color:#94a3b8">${it.notes}</em>`:""}</td><td>${it.dose}</td><td>${it.route}</td><td>${it.freq}</td><td>${it.days}</td><td><span class="${it.source==="externa"?"ext":"int"}">${it.source==="externa"?"Compra externa":"Farmacia interna"}</span></td></tr>`).join("")}
+                  <table>
+                    <tr><th>Paciente</th><td>${rx.patient}</td><th>Médico</th><td>${rx.doctor}${docStaff?.colegiado?` — Col. ${docStaff.colegiado}`:""}</td></tr>
+                    <tr><th>Diagnóstico</th><td colspan="3">${rx.dx}</td></tr>
                   </table>
-                  <br><div style="border-top:1px solid #e2e8f0;padding-top:12px;display:flex;justify-content:space-between;font-size:12px;color:#94a3b8"><span>${h.name||"HospitalSYS"} · ${h.phone||""}</span><span>Impreso: ${new Date().toLocaleDateString("es-GT")}</span></div>
-                  <script>window.onload=()=>window.print()</script></body></html>`);w.document.close();
+                  <h2>Medicamentos prescritos</h2>
+                  <table>
+                    <tr><th>Medicamento</th><th>Dosis</th><th>Vía</th><th>Frecuencia</th><th>Días</th><th>Tipo</th></tr>
+                    ${rx.items.map(it=>`<tr>
+                      <td><strong>${it.drug}</strong>${it.notes?`<br><em style="font-size:11px;color:#94a3b8">${it.notes}</em>`:""}</td>
+                      <td>${it.dose}</td><td>${it.route}</td><td>${it.freq}</td><td>${it.days}</td>
+                      <td><span class="${it.source==="externa"?"ext":"int"}">${it.source==="externa"?"🏪 Compra externa":"🏥 Farmacia interna"}</span></td>
+                    </tr>`).join("")}
+                  </table>
+                  <div class="sig">
+                    <div class="sig-block">
+                      <div class="sig-line">${rx.doctor}</div>
+                      <div class="sig-sub">${docStaff?.specialty||"Médico"}${docStaff?.colegiado?` · Col. ${docStaff.colegiado}`:""}</div>
+                    </div>
+                  </div>
+                  <div class="footer">
+                    <span>${h.name||"HospitalSYS"}${h.nit?` · NIT: ${h.nit}`:""} ${h.phone?`· Tel: ${h.phone}`:""}</span>
+                    <span>Impreso: ${new Date().toLocaleDateString("es-GT")}</span>
+                  </div>
+                  <div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="background:#0f2a56;color:white;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir PDF</button></div>
+                  </body></html>`);w.document.close();
                 }} className="text-xs bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200 px-2 py-1 rounded-lg font-semibold">🖨️ PDF</button>
               </div>
             </div>
@@ -1297,44 +1339,95 @@ function Surgery({data}){
   );
 }
 
-// ─── Componente de impresión de recibo ────────────────────────────────────────
-function Receipt({payment,hospital,onClose}){
+// ─── Ticket de pago imprimible ────────────────────────────────────────────────
+function PaymentTicket({payment,hospital,size,onClose}){
+  const h=hospital||{};
+  const isRoll=size==="rollo";
+
+  const printTicket=()=>{
+    const w=window.open("","_blank","width=500,height=700");
+    const maxW=isRoll?"80mm":"210mm";
+    const items=payment.items?.filter(i=>i.desc)||[];
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo ${payment.id}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Courier New',monospace;font-size:${isRoll?"11px":"13px"};color:#000;max-width:${maxW};margin:0 auto;padding:${isRoll?"8px":"24px"}}
+      .center{text-align:center}.bold{font-weight:700}.line{border-top:1px dashed #666;margin:8px 0}
+      .double{border-top:3px double #000;margin:8px 0}
+      .row{display:flex;justify-content:space-between;margin:3px 0;font-size:${isRoll?"11px":"13px"}}
+      .hospital-name{font-size:${isRoll?"14px":"18px"};font-weight:900;text-align:center;margin-bottom:2px}
+      .sig{margin-top:${isRoll?"20px":"32px"};text-align:center}
+      .sig-line{border-top:1px solid #000;display:inline-block;min-width:120px;padding-top:4px;font-size:11px}
+      @media print{button{display:none!important}}
+    </style></head><body>
+    <div class="hospital-name">${h.name||"HospitalSYS"}</div>
+    ${h.nit?`<p class="center" style="font-size:11px">NIT: ${h.nit}</p>`:""}
+    ${h.address?`<p class="center" style="font-size:11px">${h.address}</p>`:""}
+    ${h.phone?`<p class="center" style="font-size:11px">Tel: ${h.phone}</p>`:""}
+    <div class="line"></div>
+    <p class="center bold" style="font-size:${isRoll?"12px":"14px"}">RECIBO DE PAGO</p>
+    <div class="line"></div>
+    <div class="row"><span>No. Recibo:</span><span class="bold">${payment.id}</span></div>
+    <div class="row"><span>Fecha:</span><span>${payment.date}</span></div>
+    <div class="row"><span>Paciente:</span><span class="bold">${payment.patient}</span></div>
+    <div class="double"></div>
+    ${items.length>0?`
+      <p class="bold" style="margin-bottom:4px">DETALLE:</p>
+      ${items.map(it=>`<div class="row"><span>${it.desc}</span><span>Q ${Number(it.amount||0).toFixed(2)}</span></div>`).join("")}
+      <div class="line"></div>
+    `:`<p style="margin:4px 0">${payment.concept||"—"}</p><div class="line"></div>`}
+    <div class="row bold" style="font-size:${isRoll?"14px":"16px"}"><span>TOTAL PAGADO:</span><span>Q ${Number(payment.amount||0).toFixed(2)}</span></div>
+    <div class="double"></div>
+    <div class="row"><span>Método:</span><span>${payment.method}${payment.bank?` — ${payment.bank}`:""}</span></div>
+    ${payment.authCode?`<div class="row"><span>Autorización:</span><span class="bold">${payment.authCode}</span></div>`:""}
+    <div class="row"><span>Estado:</span><span class="bold">${payment.status}</span></div>
+    <div class="line"></div>
+    <div class="sig">
+      <div class="sig-line">${payment.secretary||"Secretaría"}</div>
+      <p style="font-size:11px;margin-top:2px">Responsable del cobro</p>
+    </div>
+    ${h.slogan?`<p class="center" style="font-size:10px;margin-top:10px;color:#666;font-style:italic">${h.slogan}</p>`:""}
+    <p class="center" style="font-size:10px;color:#999;margin-top:6px">Impreso: ${new Date().toLocaleDateString("es-GT")}</p>
+    <div style="text-align:center;margin-top:16px">
+      <button onclick="window.print()" style="background:#0f2a56;color:white;border:none;padding:8px 20px;border-radius:6px;font-size:13px;cursor:pointer">🖨️ Imprimir</button>
+    </div>
+    </body></html>`);
+    w.document.close();
+  };
+
   return(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-        {/* Header */}
-        <div className="p-6 text-center" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
-          {hospital.logo?<img src={hospital.logo} className="w-12 h-12 mx-auto rounded-xl object-contain bg-white/10 p-1 mb-2"/>
-            :<div className="w-12 h-12 mx-auto rounded-xl bg-sky-400 flex items-center justify-center text-xl font-black text-white mb-2">{hospital.name?.[0]||"H"}</div>}
-          <p className="font-extrabold text-white text-lg">{hospital.name||"HospitalSYS"}</p>
-          {hospital.address&&<p className="text-blue-300 text-xs mt-1">{hospital.address}</p>}
-          {hospital.phone&&<p className="text-blue-300 text-xs">Tel: {hospital.phone}</p>}
+        <div className="p-5 text-center" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
+          {h.logo?<img src={h.logo} className="w-10 h-10 mx-auto rounded-xl object-contain bg-white/10 p-1 mb-2"/>
+            :<div className="w-10 h-10 mx-auto rounded-xl bg-sky-400 flex items-center justify-center text-xl font-black text-white mb-2">{h.name?.[0]||"H"}</div>}
+          <p className="font-extrabold text-white">{h.name||"HospitalSYS"}</p>
+          {h.nit&&<p className="text-blue-300 text-xs">NIT: {h.nit}</p>}
+          <p className="text-blue-300 text-xs mt-1">No. {payment.id} · {payment.date}</p>
         </div>
-        {/* Body */}
-        <div className="p-5 space-y-3">
-          <div className="text-center border-b border-dashed border-slate-200 pb-3">
-            <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Recibo de Pago</p>
-            <p className="text-2xl font-extrabold text-blue-700 mt-1">{payment.id}</p>
-            <p className="text-xs text-slate-500">{payment.date}</p>
+        <div className="p-5 space-y-2">
+          <div className="flex justify-between"><span className="text-xs text-slate-400">Paciente</span><span className="font-bold text-sm">{payment.patient}</span></div>
+          <div className="flex justify-between"><span className="text-xs text-slate-400">Concepto</span><span className="text-sm text-slate-700">{payment.concept}</span></div>
+          {(payment.items||[]).filter(i=>i.desc).map((it,i)=>(
+            <div key={i} className="flex justify-between text-xs"><span className="text-slate-500">{it.desc}</span><span className="font-semibold">Q {Number(it.amount||0).toFixed(2)}</span></div>
+          ))}
+          <div className="border-t border-dashed border-slate-200 pt-2 flex justify-between">
+            <span className="font-bold text-slate-700">TOTAL</span>
+            <span className="text-xl font-extrabold text-emerald-700">Q {Number(payment.amount||0).toFixed(2)}</span>
           </div>
-          <div className="space-y-2">
-            {[["Paciente",payment.patient],["Concepto",payment.concept],["Método",payment.method],payment.authCode?["No. Autorización",payment.authCode]:null,["Estado",payment.status]].filter(Boolean).map(([k,v])=>(
-              <div key={k} className="flex justify-between items-start">
-                <span className="text-xs text-slate-400 font-semibold uppercase">{k}</span>
-                <span className="text-sm text-slate-700 font-semibold text-right max-w-48">{v}</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center">
-            <span className="text-base font-bold text-slate-700">TOTAL</span>
-            <span className="text-2xl font-extrabold text-emerald-700">{Qtz(payment.amount)}</span>
-          </div>
-          {hospital.slogan&&<p className="text-center text-xs text-slate-400 italic pt-1">{hospital.slogan}</p>}
+          <div className="flex justify-between text-xs"><span className="text-slate-400">Método</span><span className="font-semibold">{payment.method}{payment.bank?` — ${payment.bank}`:""}</span></div>
+          {payment.authCode&&<div className="flex justify-between text-xs"><span className="text-slate-400">Autorización</span><span className="font-mono font-bold">{payment.authCode}</span></div>}
         </div>
-        {/* Actions */}
-        <div className="px-5 pb-5 flex gap-2">
-          <button onClick={()=>window.print()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors">🖨️ Imprimir</button>
-          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">Cerrar</button>
+        <div className="px-5 pb-5 space-y-3">
+          <div className="flex gap-2">
+            <button onClick={()=>setReceiptSize?.(s=>s==="carta"?"rollo":"carta")} className="flex-1 py-2 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">
+              {size==="carta"?"🖨️ Modo rollo":"📄 Modo carta"}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={printTicket} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold">🖨️ Imprimir ticket</button>
+            <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold">Cerrar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1344,7 +1437,7 @@ function Receipt({payment,hospital,onClose}){
 // ══════════════════════════════════════════════════════════════════════════════
 // FARMACIA — CRUD completo
 // ══════════════════════════════════════════════════════════════════════════════
-function Pharmacy({data,setData}){
+function Pharmacy({data,setData,setActive,setPurchasePreFill,setReturnPreFill}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
   const blank={id:"",drug:"",stock:0,unit:"comp",reorder:30,price:"",supplier:"",expiry:"",minStock:50};
   const [form,setForm]=useState(blank);
@@ -1385,9 +1478,16 @@ function Pharmacy({data,setData}){
             <TD><StockChip qty={f.stock} minStock={f.minStock}/></TD>
             <TD><span className="text-xs text-slate-400">{f.supplier}</span></TD>
             <td className="px-3 py-3">
-              <div className="flex gap-2">
+              <div className="flex gap-1 flex-wrap">
                 <button onClick={()=>openEdit(f)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
                 <button onClick={()=>del(f.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+                {setActive&&<button onClick={()=>{
+                  setPurchasePreFill&&setPurchasePreFill({drugId:f.id,drug:f.drug,unit:f.unit,supplierId:data.suppliers.find(s=>s.name===f.supplier)?.id||"",type:"farmacia",unitCost:f.price});
+                  setActive("purchases");
+                }} className="text-xs text-emerald-600 font-bold hover:underline">🛒 Comprar</button>}
+                {expiryLevel(f.expiry)&&expiryLevel(f.expiry)!=="ok"&&setActive&&<button onClick={()=>{
+                  setActive("returns");
+                }} className="text-xs text-amber-600 font-bold hover:underline">↩️ Dev.</button>}
               </div>
             </td>
           </tr>
@@ -1513,12 +1613,25 @@ function Inventory({data,setData}){
 // ══════════════════════════════════════════════════════════════════════════════
 // COMPRAS — Órdenes de compra con recibo de ingreso
 // ══════════════════════════════════════════════════════════════════════════════
-function Purchases({data,setData}){
+function Purchases({data,setData,preFill,clearPreFill}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
   const [showReceipt,setShowReceipt]=useState(null);
   const blankItem={type:"farmacia",itemId:"",item:"",qty:"",unitCost:"",unit:""};
-  const blank={id:"",supplierId:"",supplier:"",date:TODAY,items:[{...blankItem}],total:0,status:"Pendiente",notes:"",receivedBy:""};
+  const blank={id:"",supplierId:"",supplier:"",date:TODAY,items:[{...blankItem}],total:0,status:"Pendiente",notes:"",receivedBy:"",invoiceSeries:"",invoiceNumber:"",payMethod:"Crédito proveedor",bank:"",authCode:""};
   const [form,setForm]=useState(blank);
+
+  // Handle preFill from Pharmacy "Comprar" button
+  useState(()=>{
+    if(preFill){
+      setForm(f=>({...f,
+        id:`OC${String((data.purchases||[]).length+1).padStart(3,"0")}`,
+        items:[{type:preFill.type||"farmacia",itemId:preFill.drugId||"",item:preFill.drug||"",unit:preFill.unit||"",unitCost:preFill.unitCost||"",qty:""}],
+        supplierId:preFill.supplierId||"",
+      }));
+      setSelected(null);setShowForm(true);
+      clearPreFill&&clearPreFill();
+    }
+  });
 
   const openNew=()=>{setForm({...blank,id:`OC${String((data.purchases||[]).length+1).padStart(3,"0")}`,items:[{...blankItem}]});setSelected(null);setShowForm(true);};
   const openEdit=p=>{setForm({...p,items:p.items.map(i=>({...i}))});setSelected(p.id);setShowForm(true);};
@@ -1707,9 +1820,34 @@ function Purchases({data,setData}){
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Recibido por"><Input value={form.receivedBy} onChange={e=>setForm(f=>({...f,receivedBy:e.target.value}))} placeholder="Nombre del responsable"/></Field>
-            <Field label="Estado">
+          <div className="border-t border-slate-200 pt-3">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">📄 Datos de factura y pago</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Serie de factura"><Input value={form.invoiceSeries} onChange={e=>setForm(f=>({...f,invoiceSeries:e.target.value}))} placeholder="ej. A"/></Field>
+              <Field label="Número de factura"><Input value={form.invoiceNumber} onChange={e=>setForm(f=>({...f,invoiceNumber:e.target.value}))} placeholder="ej. 001-2024"/></Field>
+            </div>
+            <Field label="Método de pago">
+              <div className="flex gap-2 flex-wrap mt-1">
+                {["Crédito proveedor","Efectivo","Transferencia","Tarjeta de crédito"].map(m=>(
+                  <button key={m} type="button" onClick={()=>setForm(f=>({...f,payMethod:m,bank:"",authCode:""}))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.payMethod===m?"bg-blue-600 text-white border-blue-600":"bg-white text-slate-600 border-slate-300"}`}>
+                    {m==="Efectivo"?"💵":m==="Transferencia"?"🏦":m==="Tarjeta de crédito"?"💳":"📋"} {m}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            {(form.payMethod==="Transferencia"||form.payMethod==="Tarjeta de crédito")&&(
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Banco">
+                  <Select value={form.bank} onChange={e=>setForm(f=>({...f,bank:e.target.value}))}>
+                    <option value="">— Seleccionar banco —</option>
+                    {(data.banks||["Banrural","G&T Continental","BAM","Banistmo","Industrial","Agromercantil","Citibank","HSBC","Promerica","Banco de Occidente"]).map(b=><option key={b}>{b}</option>)}
+                  </Select>
+                </Field>
+                <Field label="No. autorización / referencia"><Input value={form.authCode} onChange={e=>setForm(f=>({...f,authCode:e.target.value}))} placeholder="ej. TRF-447821"/></Field>
+              </div>
+            )}
+          </div>
               <Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                 {["Pendiente","Recibida","Cancelada"].map(s=><option key={s}>{s}</option>)}
               </Select>
@@ -1733,7 +1871,7 @@ function Purchases({data,setData}){
 // ══════════════════════════════════════════════════════════════════════════════
 // LABORATORIO — CRUD completo con tipos de prueba
 // ══════════════════════════════════════════════════════════════════════════════
-function Lab({data,setData}){
+function Lab({data,setData,hospital}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
   const [showTypes,setShowTypes]=useState(false);
   const blank={id:"",patientId:"",patient:"",test:"",testType:"",ordered:TODAY,status:"Pendiente",result:"",resultDetail:"",cost:"",techId:"",tech:"",notes:""};
@@ -1766,6 +1904,39 @@ function Lab({data,setData}){
   const openNew=()=>{setForm({...blank,id:`L${String(data.lab.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
   const openEdit=l=>{setForm({...l});setSelected(l.id);setShowForm(true);};
   const del=id=>{if(!window.confirm("¿Eliminar este examen?"))return;setData(d=>({...d,lab:d.lab.filter(l=>l.id!==id)}));};
+
+  const printLabResult=(l)=>{
+    const p=data.patients.find(x=>x.id===l.patientId);
+    const tech=data.staff.find(e=>e.id===l.techId);
+    const html=`
+      <div class="grid4">
+        <div class="kv"><div class="kv-label">Paciente</div><div class="kv-val">${l.patient}</div></div>
+        <div class="kv"><div class="kv-label">DPI</div><div class="kv-val">${p?.dpi||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Edad</div><div class="kv-val">${p?.age||"—"} años</div></div>
+        <div class="kv"><div class="kv-label">Tipo de sangre</div><div class="kv-val">${p?.blood||"—"}</div></div>
+      </div>
+      <div class="section">Datos del examen</div>
+      <div class="grid4">
+        <div class="kv"><div class="kv-label">No. Examen</div><div class="kv-val">${l.id}</div></div>
+        <div class="kv"><div class="kv-label">Prueba</div><div class="kv-val">${l.test}</div></div>
+        <div class="kv"><div class="kv-label">Fecha</div><div class="kv-val">${l.ordered}</div></div>
+        <div class="kv"><div class="kv-label">Estado</div><div class="kv-val">${l.status}</div></div>
+        <div class="kv"><div class="kv-label">Técnico</div><div class="kv-val">${l.tech||"—"}</div></div>
+        ${tech?.colegiado?`<div class="kv"><div class="kv-label">No. Colegiado</div><div class="kv-val">${tech.colegiado}</div></div>`:""}
+        <div class="kv"><div class="kv-label">Costo</div><div class="kv-val">Q ${Number(l.cost||0).toFixed(2)}</div></div>
+      </div>
+      <div class="section">Resultado</div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:12px">
+        <p style="font-size:16px;font-weight:700;color:#15803d">${l.result||"Pendiente"}</p>
+      </div>
+      ${l.resultDetail?`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px"><p style="font-size:12px;color:#475569;line-height:1.6">${l.resultDetail}</p></div>`:""}
+      ${l.notes?`<p style="font-size:12px;color:#64748b;margin-top:8px"><strong>Notas:</strong> ${l.notes}</p>`:""}
+    `;
+    printReport(hospital,`Resultado de Laboratorio — ${l.test}`,html,[
+      {name:l.tech||"_____________________",role:`Técnico de Laboratorio${tech?.colegiado?` · Col. ${tech.colegiado}`:""}`},
+      {name:"_____________________",role:"Revisado por / Validado"},
+    ]);
+  };
   const save=()=>{
     if(!form.patientId||!form.test)return;
     const t=labTypes.find(x=>x.name===form.test);
@@ -1810,6 +1981,7 @@ function Lab({data,setData}){
             <div className="flex gap-2">
               <button onClick={()=>openEdit(l)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
               <button onClick={()=>del(l.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+              {l.status==="Completado"&&<button onClick={()=>printLabResult(l)} className="text-xs text-emerald-600 font-bold hover:underline">🖨️ PDF</button>}
             </div>
           </td>
         </>)}
@@ -1893,7 +2065,7 @@ function Lab({data,setData}){
   );
 }
 
-function Returns({data,setData}){
+function Returns({data,setData,hospital,setActive,setPurchasePreFill}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
   const blank={id:"",drugId:"",drug:"",qty:"",unit:"",reason:"Vencido",expiry:"",supplier:"",status:"Pendiente",date:TODAY,approvedBy:"",credit:""};
   const [form,setForm]=useState(blank);
@@ -1908,28 +2080,96 @@ function Returns({data,setData}){
     setData(d=>({...d,returns:selected?d.returns.map(r=>r.id===selected?entry:r):[...d.returns,entry],pharmacy:newPharm}));
     setShowForm(false);
   };
+
+  const printReturn=(ret)=>{
+    const h=hospital||{};
+    const drug=data.pharmacy.find(f=>f.id===ret.drugId);
+    const html=`
+      <div class="grid2">
+        <div class="kv"><div class="kv-label">No. Devolución</div><div class="kv-val">${ret.id}</div></div>
+        <div class="kv"><div class="kv-label">Fecha</div><div class="kv-val">${ret.date}</div></div>
+        <div class="kv"><div class="kv-label">Proveedor</div><div class="kv-val">${ret.supplier}</div></div>
+        <div class="kv"><div class="kv-label">Estado</div><div class="kv-val">${ret.status}</div></div>
+      </div>
+      <div class="section">Detalle del medicamento devuelto</div>
+      <table>
+        <tr><th>Medicamento</th><th>Cantidad</th><th>Unidad</th><th>Razón</th><th>Vencimiento</th><th>Crédito Q</th></tr>
+        <tr><td><strong>${ret.drug}</strong></td><td>${ret.qty}</td><td>${ret.unit}</td><td>${ret.reason}</td><td>${ret.expiry||"—"}</td><td><strong>Q ${Number(ret.credit||0).toFixed(2)}</strong></td></tr>
+      </table>
+      ${ret.approvedBy?`<p style="font-size:12px;color:#64748b">Aprobado por: <strong>${ret.approvedBy}</strong></p>`:""}
+      <p style="font-size:11px;color:#94a3b8;margin-top:8px">Este documento sirve como comprobante de devolución/canje con el proveedor.</p>
+    `;
+    printReport(h, `Devolución por Canje — ${ret.id}`, html, [
+      {name:h.director||"_____________________",role:h.directorTitle||"Director General"},
+      {name:h.pharmacyChief||"_____________________",role:"Jefe de Farmacia"},
+    ]);
+  };
+
   const totalCredit=data.returns.filter(r=>r.status==="Aprobada").reduce((a,r)=>a+Number(r.credit||0),0);
+
+  // Productos próximos a vencer — ordenados por urgencia
+  const expiring=data.pharmacy
+    .filter(f=>["vencido","critico","pronto"].includes(expiryLevel(f.expiry)))
+    .sort((a,b)=>(daysUntilExpiry(a.expiry)||999)-(daysUntilExpiry(b.expiry)||999));
+
+  const printExpiryReport=()=>{
+    const rows=expiring.map(f=>`<tr><td>${f.id}</td><td><strong>${f.drug}</strong></td><td>${f.stock} ${f.unit}</td><td>${f.expiry||"—"}</td><td>${daysUntilExpiry(f.expiry)??'—'} días</td><td>${f.supplier}</td><td>Q ${(f.price*f.stock).toFixed(2)}</td></tr>`).join("");
+    printReport(hospital,`Reporte de Medicamentos Próximos a Vencer`,`
+      <div class="section">Medicamentos con alerta de vencimiento</div>
+      <table><tr><th>ID</th><th>Medicamento</th><th>Stock</th><th>Vencimiento</th><th>Días restantes</th><th>Proveedor</th><th>Valor en riesgo</th></tr>${rows}</table>
+      <div style="display:flex;justify-content:flex-end;font-weight:700;font-size:14px;padding:8px 0;border-top:2px solid #e2e8f0">
+        Valor total en riesgo: Q ${expiring.reduce((a,f)=>a+f.price*f.stock,0).toFixed(2)}
+      </div>
+    `,[{name:h?.director||"_____________________",role:h?.directorTitle||"Director General"},{name:h?.pharmacyChief||"_____________________",role:"Jefe de Farmacia"}]);
+  };
+
   return(
-    <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3"><div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Devoluciones</h2><p className="text-slate-500 text-sm">↩️ Canje por vencimiento con proveedor</p></div><Btn onClick={openNew}>＋ Nueva devolución</Btn></div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Devoluciones / Canjes</h2><p className="text-slate-500 text-sm">↩️ Canje por vencimiento con proveedor</p></div>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={printExpiryReport} className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold">🖨️ Reporte vencimientos</button>
+          <Btn onClick={openNew}>＋ Nueva devolución</Btn>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card title="Total" value={data.returns.length} color="" sub="registradas"/>
         <Card title="Pendientes" value={data.returns.filter(r=>r.status==="Pendiente").length} color="" sub="por aprobar"/>
         <Card title="Aprobadas" value={data.returns.filter(r=>r.status==="Aprobada").length} color="" sub="completadas"/>
         <Card title="Crédito total" value={Qtz(totalCredit)} color="" sub="recuperado"/>
       </div>
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4">
-        <p className="text-xs font-bold text-slate-500 uppercase mb-3">Candidatos por vencimiento</p>
-        <div className="flex flex-wrap gap-2">
-          {data.pharmacy.filter(f=>["vencido","critico","pronto"].includes(expiryLevel(f.expiry))).map(f=>(
-            <button key={f.id} onClick={()=>{setForm({...blank,id:`RET${String(data.returns.length+1).padStart(3,"0")}`,drugId:f.id,drug:f.drug,unit:f.unit,supplier:f.supplier,expiry:f.expiry,reason:expiryLevel(f.expiry)==="vencido"?"Vencido":"Próximo a vencer",credit:(f.price*f.stock).toFixed(2)});setSelected(null);setShowForm(true);}}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all hover:border-blue-400 ${expiryBg(expiryLevel(f.expiry))||"bg-slate-50 border-slate-200"}`}>
-              <ExpiryChip expiry={f.expiry}/><span className="font-semibold text-slate-700">{f.drug}</span><span className="text-slate-400">Stock: {f.stock}</span>
-            </button>
-          ))}
-          {data.pharmacy.filter(f=>["vencido","critico","pronto"].includes(expiryLevel(f.expiry))).length===0&&<span className="text-xs text-slate-400">Sin candidatos activos</span>}
+
+      {/* Candidatos por vencimiento */}
+      {expiring.length>0&&(
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 space-y-3">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <p className="text-sm font-bold text-amber-800">⚠️ {expiring.length} medicamento{expiring.length>1?"s":""} próximo{expiring.length>1?"s":""} a vencer — candidatos a devolución</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {expiring.map(f=>(
+              <div key={f.id} className={`bg-white border rounded-xl p-3 flex justify-between items-start gap-3 ${expiryLevel(f.expiry)==="vencido"?"border-red-300":"border-amber-200"}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-800 text-sm truncate">{f.drug}</p>
+                  <p className="text-xs text-slate-500">{f.stock} {f.unit} · {f.supplier}</p>
+                  <div className="flex gap-2 mt-1"><ExpiryChip expiry={f.expiry}/></div>
+                </div>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button onClick={()=>{
+                    setForm({...blank,id:`RET${String(data.returns.length+1).padStart(3,"0")}`,drugId:f.id,drug:f.drug,unit:f.unit,supplier:f.supplier,expiry:f.expiry,reason:expiryLevel(f.expiry)==="vencido"?"Vencido":"Próximo a vencer",qty:String(f.stock),credit:(f.price*f.stock).toFixed(2)});
+                    setSelected(null);setShowForm(true);
+                  }} className="text-xs bg-amber-600 text-white px-2 py-1 rounded-lg font-bold hover:bg-amber-700">↩️ Devolver</button>
+                  {setPurchasePreFill&&<button onClick={()=>{
+                    setPurchasePreFill({drugId:f.id,drug:f.drug,unit:f.unit,supplierId:data.suppliers.find(s=>s.name===f.supplier)?.id||"",type:"farmacia"});
+                    setActive("purchases");
+                  }} className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg font-bold hover:bg-blue-700">🛒 Comprar</button>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
       <Table cols={["ID","Medicamento","Cant.","Razón","Vencimiento","Proveedor","Crédito","Estado",""]} rows={data.returns}
         renderRow={r=>(<>
           <TD><span className="font-mono text-blue-700 font-bold">{r.id}</span></TD>
@@ -1940,11 +2180,17 @@ function Returns({data,setData}){
           <TD><span className="text-xs text-slate-500">{r.supplier}</span></TD>
           <TD><span className="text-emerald-700 font-bold">{Qtz(r.credit)}</span></TD>
           <TD><Badge val={r.status} map={statusRet}/></TD>
-          <td className="px-4 py-2"><button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button></td>
+          <td className="px-3 py-3">
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+              <button onClick={()=>printReturn(r)} className="text-xs text-emerald-600 font-bold hover:underline">🖨️ PDF</button>
+            </div>
+          </td>
         </>)}
       />
       {showForm&&(
-        <Modal title={selected?"Editar Devolución":"Nueva Devolución"} onClose={()=>setShowForm(false)} wide>
+        <Modal title={selected?"Editar Devolución":"Nueva Devolución / Canje"} onClose={()=>setShowForm(false)} wide>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 font-semibold">↩️ El documento impreso incluirá la firma del Director y Jefe de Farmacia configurados en Mantenimiento.</div>
           <Field label="Medicamento"><Select value={form.drugId} onChange={e=>{const f=data.pharmacy.find(x=>x.id===e.target.value);setForm(p=>({...p,drugId:e.target.value,drug:f?.drug||"",unit:f?.unit||"",supplier:f?.supplier||"",expiry:f?.expiry||"",credit:((f?.price||0)*(f?.stock||0)).toFixed(2)}));}}><option value="">—</option>{data.pharmacy.map(f=><option key={f.id} value={f.id}>{f.drug} — Stock:{f.stock} {f.expiry?`| Vence:${f.expiry}`:""}</option>)}</Select></Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Cantidad"><Input type="number" value={form.qty} onChange={e=>setForm(f=>({...f,qty:e.target.value}))}/></Field>
@@ -1969,18 +2215,35 @@ function Returns({data,setData}){
 function Payments({data,setData,hospital}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
   const [showReceipt,setShowReceipt]=useState(null);
-  const blank={id:"",patientId:"",patient:"",date:TODAY,amount:"",method:"Efectivo",authCode:"",concept:"",status:"Pendiente",secretary:"Secretaría"};
+  const [receiptSize,setReceiptSize]=useState("carta");
+  const DEFAULT_BANKS=["Banrural","G&T Continental","BAM","Banistmo","Industrial","Agromercantil","Citibank","HSBC","Promerica","Banco de Occidente"];
+  const [banks,setBanks]=useState(()=>{try{const s=localStorage.getItem("hospital_banks");return s?JSON.parse(s):DEFAULT_BANKS;}catch{return DEFAULT_BANKS;}});
+  const [newBank,setNewBank]=useState("");
+  const blank={id:"",patientId:"",patient:"",date:TODAY,amount:"",method:"Efectivo",bank:"",authCode:"",concept:"",status:"Pendiente",secretary:"Secretaría",items:[{desc:"",amount:""}]};
   const [form,setForm]=useState(blank);
   const openNew=()=>{setForm({...blank,id:`PAG${String(data.payments.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
-  const openEdit=p=>{setForm({...p});setSelected(p.id);setShowForm(true);};
+  const openEdit=p=>{setForm({...p,items:p.items||[{desc:"",amount:""}]});setSelected(p.id);setShowForm(true);};
   const del=id=>{if(!window.confirm("¿Anular este pago?"))return;setData(d=>({...d,payments:d.payments.map(p=>p.id===id?{...p,status:"Anulado"}:p)}));};
-  const save=()=>{if(!form.patientId||!form.amount)return;setData(d=>({...d,payments:selected?d.payments.map(p=>p.id===selected?form:p):[...d.payments,form]}));setShowForm(false);};
+  const save=()=>{
+    const total=form.amount||(form.items||[]).reduce((a,i)=>a+Number(i.amount||0),0);
+    if(!form.patientId||!total)return;
+    const entry={...form,amount:total};
+    setData(d=>({...d,payments:selected?d.payments.map(p=>p.id===selected?entry:p):[...d.payments,entry]}));
+    setShowForm(false);
+  };
+  const addItem=()=>setForm(f=>({...f,items:[...(f.items||[]),{desc:"",amount:""}]}));
+  const removeItem=idx=>setForm(f=>({...f,items:(f.items||[]).filter((_,i)=>i!==idx)}));
+  const updateItem=(idx,field,val)=>setForm(f=>({...f,items:(f.items||[]).map((it,i)=>i===idx?{...it,[field]:val}:it)}));
+  const calcTotal=(items)=>(items||[]).reduce((a,i)=>a+Number(i.amount||0),0);
+
+  const saveBank=()=>{if(!newBank.trim())return;const nb=[...banks,newBank.trim()];setBanks(nb);try{localStorage.setItem("hospital_banks",JSON.stringify(nb));}catch{}setNewBank("");};
+
   const total=data.payments.reduce((a,p)=>a+Number(p.amount),0);
   const cobrado=data.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0);
   return(
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap justify-between items-center gap-2">
-        <div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Pagos de Pacientes</h2><p className="text-slate-500 text-sm">💳 Secretaría registra cobros y genera recibos</p></div>
+        <div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Pagos de Pacientes</h2><p className="text-slate-500 text-sm">💳 Genera tickets de cobro con detalle de servicios</p></div>
         <Btn onClick={openNew}>＋ Registrar pago</Btn>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1988,32 +2251,84 @@ function Payments({data,setData,hospital}){
         <Card title="Cobrado" value={Qtz(cobrado)} color="" sub="confirmados"/>
         <Card title="Por cobrar" value={Qtz(total-cobrado)} color="" sub="pendientes"/>
       </div>
-      <Table cols={["ID","Paciente","Fecha","Concepto","Método","Autorización","Monto","Estado",""]} rows={data.payments}
+      <Table cols={["ID","Paciente","Fecha","Concepto","Método","Banco","Autorización","Monto","Estado",""]} rows={data.payments}
         renderRow={r=>(<>
           <TD><span className="font-mono text-blue-700 font-bold">{r.id}</span></TD><TD>{r.patient}</TD><TD>{r.date}</TD>
           <TD><span className="text-xs">{r.concept}</span></TD>
-          <TD><span className={`text-xs font-bold ${r.method==="Efectivo"?"text-emerald-700":"text-blue-700"}`}>{r.method==="Efectivo"?"💵":"🏦"} {r.method}</span></TD>
+          <TD><span className={`text-xs font-bold ${r.method==="Efectivo"?"text-emerald-700":r.method==="Tarjeta de crédito"?"text-purple-700":"text-blue-700"}`}>{r.method==="Efectivo"?"💵":r.method==="Tarjeta de crédito"?"💳":"🏦"} {r.method}</span></TD>
+          <TD><span className="text-xs text-slate-500">{r.bank||"—"}</span></TD>
           <TD><span className="font-mono text-xs text-slate-500">{r.authCode||"—"}</span></TD>
           <TD><span className="font-bold text-emerald-700">{Qtz(r.amount)}</span></TD>
           <TD><Badge val={r.status} map={statusPago}/></TD>
           <td className="px-3 py-3">
             <div className="flex gap-1 flex-wrap">
               <button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
-              <button onClick={()=>setShowReceipt(r)} className="text-xs text-emerald-600 font-bold hover:underline">🧾 Recibo</button>
+              <button onClick={()=>setShowReceipt(r)} className="text-xs text-emerald-600 font-bold hover:underline">🎫 Ticket</button>
               {r.status!=="Anulado"&&<button onClick={()=>del(r.id)} className="text-xs text-red-500 font-bold hover:underline">Anular</button>}
             </div>
           </td>
         </>)}
       />
-      {showReceipt&&<Receipt payment={showReceipt} hospital={hospital} onClose={()=>setShowReceipt(null)}/>}
+      {showReceipt&&<PaymentTicket payment={showReceipt} hospital={hospital} size={receiptSize} setReceiptSize={setReceiptSize} onClose={()=>setShowReceipt(null)}/>}
       {showForm&&(
-        <Modal title={selected?"Editar Pago":"Registrar Pago"} onClose={()=>setShowForm(false)} wide>
+        <Modal title={selected?"Editar Pago":"Registrar Pago"} onClose={()=>setShowForm(false)} extraWide>
           <Field label="Paciente"><Select value={form.patientId} onChange={e=>{const p=data.patients.find(x=>x.id===e.target.value);setForm(f=>({...f,patientId:e.target.value,patient:p?.name||""}));}}><option value="">—</option>{data.patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
-          <Field label="Concepto"><Input value={form.concept} onChange={e=>setForm(f=>({...f,concept:e.target.value}))}/></Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><Field label="Monto (Q)"><Input type="number" step="0.01" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/></Field><Field label="Fecha"><Input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field></div>
-          <Field label="Método"><div className="grid grid-cols-2 gap-3">{["Efectivo","Transferencia"].map(m=><button key={m} onClick={()=>setForm(f=>({...f,method:m,authCode:m==="Efectivo"?"":f.authCode}))} className={`p-4 rounded-xl border text-sm font-bold flex items-center gap-2 justify-center transition-all ${form.method===m?"border-blue-500 bg-blue-600 text-white":"border-slate-300 bg-slate-50 text-slate-600"}`}>{m==="Efectivo"?"💵 Efectivo":"🏦 Transferencia"}</button>)}</div></Field>
-          {form.method==="Transferencia"&&<Field label="No. autorización banco"><Input value={form.authCode} onChange={e=>setForm(f=>({...f,authCode:e.target.value}))} placeholder="TRF-XXXXXX"/></Field>}
-          <Field label="Estado"><Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>{["Pendiente","Pagado","Anulado"].map(s=><option key={s}>{s}</option>)}</Select></Field>
+
+          {/* Detalle de servicios */}
+          <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50 space-y-2">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-slate-500 uppercase">Detalle de servicios cobrados</p>
+              <button onClick={addItem} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-bold">＋ Agregar</button>
+            </div>
+            {(form.items||[]).map((it,idx)=>(
+              <div key={idx} className="flex gap-2 items-center">
+                <input value={it.desc} onChange={e=>updateItem(idx,"desc",e.target.value)} placeholder="ej. Consulta médica, Hospitalización..." className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"/>
+                <input type="number" step="0.01" value={it.amount} onChange={e=>updateItem(idx,"amount",e.target.value)} placeholder="Q" className="w-24 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"/>
+                {(form.items||[]).length>1&&<button onClick={()=>removeItem(idx)} className="text-red-500 font-bold">✕</button>}
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+              <span className="text-sm font-bold text-slate-700">Total calculado:</span>
+              <span className="text-lg font-extrabold text-blue-700">{Qtz(calcTotal(form.items))}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Monto total (Q) — sobreescribe si se llena"><Input type="number" step="0.01" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="Déjalo vacío para usar el calculado"/></Field>
+            <Field label="Concepto general"><Input value={form.concept} onChange={e=>setForm(f=>({...f,concept:e.target.value}))}/></Field>
+            <Field label="Fecha"><Input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field>
+            <Field label="Estado"><Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>{["Pendiente","Pagado","Anulado"].map(s=><option key={s}>{s}</option>)}</Select></Field>
+          </div>
+
+          <Field label="Método de pago">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+              {["Efectivo","Transferencia","Tarjeta de crédito","Cheque"].map(m=>(
+                <button key={m} type="button" onClick={()=>setForm(f=>({...f,method:m,bank:"",authCode:""}))}
+                  className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 transition-all ${form.method===m?"border-blue-500 bg-blue-600 text-white":"border-slate-300 bg-slate-50 text-slate-600"}`}>
+                  <span className="text-lg">{m==="Efectivo"?"💵":m==="Transferencia"?"🏦":m==="Tarjeta de crédito"?"💳":"📝"}</span>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {(form.method==="Transferencia"||form.method==="Tarjeta de crédito")&&(
+            <div className="space-y-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+              <Field label={form.method==="Tarjeta de crédito"?"Banco emisor de la tarjeta":"Banco de transferencia"}>
+                <Select value={form.bank} onChange={e=>setForm(f=>({...f,bank:e.target.value}))}>
+                  <option value="">— Seleccionar banco —</option>
+                  {banks.map(b=><option key={b}>{b}</option>)}
+                </Select>
+              </Field>
+              <Field label="No. autorización del banco"><Input value={form.authCode} onChange={e=>setForm(f=>({...f,authCode:e.target.value}))} placeholder="ej. AUTH-447821"/></Field>
+              {/* Agregar nuevo banco */}
+              <div className="flex gap-2 items-center pt-1 border-t border-blue-200">
+                <input value={newBank} onChange={e=>setNewBank(e.target.value)} placeholder="Agregar banco nuevo…" className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500"/>
+                <button onClick={saveBank} className="text-xs bg-blue-600 text-white px-3 py-2 rounded-xl font-bold">＋ Agregar</button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
         </Modal>
       )}
@@ -2185,7 +2500,7 @@ function Roles({data,setData}){
 }
 
 // ── Función central de impresión ─────────────────────────────────────────────
-function printReport(hospital, title, htmlContent) {
+function printReport(hospital, title, htmlContent, signatories) {
   const h = hospital || {};
   const logoHtml = h.logo
     ? `<img src="${h.logo}" style="width:60px;height:60px;object-fit:contain;border-radius:10px;background:#f1f5f9;padding:4px">`
@@ -2196,6 +2511,7 @@ function printReport(hospital, title, htmlContent) {
       ${logoHtml}
       <div style="flex:1">
         <div style="font-size:20px;font-weight:900;color:#0f2856">${h.name||"HospitalSYS"}</div>
+        ${h.nit?`<div style="font-size:12px;color:#64748b">NIT: ${h.nit}</div>`:""}
         ${h.slogan?`<div style="font-size:13px;color:#64748b;font-style:italic">${h.slogan}</div>`:""}
         ${h.address?`<div style="font-size:12px;color:#94a3b8">${h.address}</div>`:""}
         ${h.phone?`<div style="font-size:12px;color:#94a3b8">Tel: ${h.phone}${h.email?` · ${h.email}`:""}</div>`:""}
@@ -2229,12 +2545,27 @@ function printReport(hospital, title, htmlContent) {
       .card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;text-align:center}
       .card-num{font-size:28px;font-weight:900;color:#0369a1}
       .card-label{font-size:11px;color:#64748b;font-weight:600;margin-top:2px}
+      .sig-block{display:inline-block;text-align:center;min-width:180px}
+      .sig-line{border-top:1px solid #334155;margin-top:40px;padding-top:6px;font-size:12px;font-weight:700;color:#1e293b}
+      .sig-sub{font-size:11px;color:#64748b}
       .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}
       @media print{button{display:none!important}}
     </style>
   `;
 
-  const footer = `<div class="footer"><span>${h.name||"HospitalSYS"} ${h.phone?`· Tel: ${h.phone}`:""}</span><span>Documento generado el ${new Date().toLocaleDateString("es-GT")}</span></div>`;
+  // Signature block
+  const defaultSigs = signatories || [];
+  if(defaultSigs.length===0){
+    if(h.director) defaultSigs.push({name:h.director,role:h.directorTitle||"Director General"});
+    if(h.pharmacyChief) defaultSigs.push({name:h.pharmacyChief,role:"Jefe de Farmacia"});
+  }
+  const sigsHtml = defaultSigs.length ? `
+    <div style="margin-top:48px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:24px">
+      ${defaultSigs.map(s=>`<div class="sig-block"><div class="sig-line">${s.name}</div><div class="sig-sub">${s.role}</div></div>`).join("")}
+    </div>
+  ` : "";
+
+  const footer = `${sigsHtml}<div class="footer"><span>${h.name||"HospitalSYS"}${h.nit?` · NIT: ${h.nit}`:""} ${h.phone?`· Tel: ${h.phone}`:""}</span><span>Impreso: ${new Date().toLocaleDateString("es-GT")}</span></div>`;
 
   const w = window.open("", "_blank", "width=900,height=700");
   if(!w) { alert("Por favor permite ventanas emergentes para imprimir."); return; }
@@ -2727,101 +3058,93 @@ function Maintenance({hospital,setHospital}){
     localStorage.setItem("hospital_config",JSON.stringify(form));
     setSaved(true);setTimeout(()=>setSaved(false),2500);
   };
+  const F=({label,children})=><div className="flex flex-col gap-1"><label className="text-xs text-slate-500 uppercase font-bold tracking-wider">{label}</label>{children}</div>;
+  const I=(p)=><input {...p} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full"/>;
 
   return(
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-5 max-w-2xl">
       <div>
         <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Configuración del Hospital</h2>
         <p className="text-slate-500 text-sm mt-1">Solo el Administrador puede modificar esta información.</p>
       </div>
-
       {saved&&<div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 text-emerald-700 font-bold flex items-center gap-2">✅ Cambios guardados correctamente</div>}
 
       {/* Logo */}
       <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-4">
-        <h3 className="font-bold text-slate-700 text-base">Logo del Hospital</h3>
+        <h3 className="font-bold text-slate-700">Logo del Hospital</h3>
         <div className="flex items-center gap-5">
-          {form.logo
-            ?<img src={form.logo} alt="logo" className="w-24 h-24 rounded-2xl object-contain border-2 border-slate-200 shadow bg-slate-50"/>
-            :<div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-3xl font-black shadow">{form.name?.[0]||"H"}</div>
-          }
+          {form.logo?<img src={form.logo} alt="logo" className="w-24 h-24 rounded-2xl object-contain border-2 border-slate-200 shadow bg-slate-50"/>
+            :<div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-3xl font-black shadow">{form.name?.[0]||"H"}</div>}
           <div className="space-y-2">
-            <button onClick={()=>logoRef.current.click()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow transition-colors">{form.logo?"Cambiar logo":"Subir logo"}</button>
-            {form.logo&&<button onClick={()=>setForm(p=>({...p,logo:null}))} className="block px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-sm font-bold transition-colors">Quitar logo</button>}
+            <button onClick={()=>logoRef.current.click()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow">{form.logo?"Cambiar logo":"Subir logo"}</button>
+            {form.logo&&<button onClick={()=>setForm(p=>({...p,logo:null}))} className="block px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-bold">Quitar logo</button>}
             <p className="text-xs text-slate-400">PNG, JPG o SVG recomendado</p>
           </div>
         </div>
         <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogo}/>
       </div>
 
-      {/* Información */}
-      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-4">
-        <h3 className="font-bold text-slate-700 text-base">Información del Hospital</h3>
-        <div className="space-y-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Nombre del hospital</label>
-            <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full" placeholder="ej. Hospital General de Guatemala"/>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Eslogan</label>
-            <input value={form.slogan} onChange={e=>setForm(p=>({...p,slogan:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full" placeholder="ej. Tu salud es nuestra misión"/>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Descripción</label>
-            <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full resize-none" placeholder="Descripción breve del hospital..."/>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Teléfono</label>
-              <input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. 2234-5678"/>
+      {/* Información general */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-3">
+        <h3 className="font-bold text-slate-700">Información General</h3>
+        <F label="Nombre del hospital"><I value={form.name||""} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="ej. Hospital General de Guatemala"/></F>
+        <F label="NIT del hospital"><I value={form.nit||""} onChange={e=>setForm(p=>({...p,nit:e.target.value}))} placeholder="ej. 1234567-8"/></F>
+        <F label="Eslogan"><I value={form.slogan||""} onChange={e=>setForm(p=>({...p,slogan:e.target.value}))} placeholder="ej. Tu salud es nuestra misión"/></F>
+        <F label="Descripción"><textarea value={form.description||""} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={2} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full resize-none"/></F>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <F label="Teléfono"><I value={form.phone||""} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder="ej. 2234-5678"/></F>
+          <F label="Correo electrónico"><I type="email" value={form.email||""} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder="info@hospital.gt"/></F>
+        </div>
+        <F label="Dirección"><I value={form.address||""} onChange={e=>setForm(p=>({...p,address:e.target.value}))} placeholder="ej. 6a Avenida, Zona 1, Guatemala City"/></F>
+      </div>
+
+      {/* Autoridades — aparecen en documentos impresos */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-3">
+        <h3 className="font-bold text-slate-700">👤 Autoridades del Hospital <span className="text-xs text-slate-400 font-normal">(aparecen en documentos impresos)</span></h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <F label="Nombre del Director"><I value={form.director||""} onChange={e=>setForm(p=>({...p,director:e.target.value}))} placeholder="ej. Dr. Carlos García"/></F>
+          <F label="Cargo del Director"><I value={form.directorTitle||""} onChange={e=>setForm(p=>({...p,directorTitle:e.target.value}))} placeholder="ej. Director General"/></F>
+        </div>
+        <F label="Jefe de Farmacia"><I value={form.pharmacyChief||""} onChange={e=>setForm(p=>({...p,pharmacyChief:e.target.value}))} placeholder="ej. Q.F. Mario Godínez"/></F>
+      </div>
+
+      {/* Sistema */}
+      <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-3">
+        <h3 className="font-bold text-slate-700">⚙️ Sistema</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <F label="Versión del sistema"><I value={form.version||""} onChange={e=>setForm(p=>({...p,version:e.target.value}))} placeholder="ej. v5.0"/></F>
+          <F label="Color primario">
+            <div className="flex items-center gap-2">
+              <input type="color" value={form.primaryColor||"#0f2a56"} onChange={e=>setForm(p=>({...p,primaryColor:e.target.value}))} className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"/>
+              <span className="text-sm text-slate-600 font-mono">{form.primaryColor||"#0f2a56"}</span>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Correo</label>
-              <input type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="info@hospital.gt"/>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Dirección</label>
-            <input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. 6a Avenida, Zona 1, Guatemala"/>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Versión del sistema</label>
-              <input value={form.version} onChange={e=>setForm(p=>({...p,version:e.target.value}))} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full" placeholder="ej. v5.0"/>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Color primario</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={form.primaryColor||"#0f2a56"} onChange={e=>setForm(p=>({...p,primaryColor:e.target.value}))} className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"/>
-                <span className="text-sm text-slate-600 font-mono">{form.primaryColor||"#0f2a56"}</span>
-              </div>
-            </div>
-          </div>
+          </F>
         </div>
       </div>
 
       {/* Vista previa */}
       <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-3">
-        <h3 className="font-bold text-slate-700 text-base">Vista previa del sidebar</h3>
+        <h3 className="font-bold text-slate-700">Vista previa</h3>
         <div className="rounded-2xl p-4 flex items-center gap-3" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
-          {form.logo
-            ?<img src={form.logo} className="w-10 h-10 rounded-xl object-contain bg-white p-1"/>
-            :<div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-black" style={{background:form.primaryColor||"#1d4ed8"}}>{form.name?.[0]||"H"}</div>
-          }
+          {form.logo?<img src={form.logo} className="w-10 h-10 rounded-xl object-contain bg-white p-1"/>
+            :<div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-black" style={{background:form.primaryColor||"#1d4ed8"}}>{form.name?.[0]||"H"}</div>}
           <div>
             <p className="font-extrabold text-white text-sm">{form.name||"HospitalSYS"}</p>
             <p className="text-xs text-blue-300">{form.slogan||"v5.0 — Guatemala"}</p>
           </div>
         </div>
+        {(form.director||form.nit)&&(
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-500 space-y-0.5">
+            {form.nit&&<p>NIT: {form.nit}</p>}
+            {form.director&&<p>Director: {form.director} ({form.directorTitle})</p>}
+            {form.pharmacyChief&&<p>Jefe Farmacia: {form.pharmacyChief}</p>}
+          </div>
+        )}
       </div>
 
       <button onClick={save} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-lg transition-colors">💾 Guardar cambios</button>
-
-      {/* Info sobre dónde se guardan los datos */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
-        <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">ℹ️ ¿Dónde se guarda la información?</p>
-        <p className="text-xs text-slate-500">Los datos se guardan en <strong>localStorage</strong> del navegador. Esto significa que persisten aunque cierres el navegador, pero son locales a este dispositivo/navegador.</p>
-        <p className="text-xs text-slate-500">Para una base de datos en la nube (acceso desde múltiples dispositivos), se recomienda integrar <strong>Firebase Firestore</strong> o <strong>Supabase</strong>.</p>
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-500">
+        ℹ️ Los datos se guardan en <strong>localStorage</strong> del navegador. Para sincronización multi-dispositivo, integra Firebase Firestore.
       </div>
     </div>
   );
@@ -3015,8 +3338,8 @@ export default function App(){
     try{const s=localStorage.getItem("hospital_data");return s?JSON.parse(s):INITIAL_DATA;}catch{return INITIAL_DATA;}
   });
   const [hospital,setHospital]=useState(()=>{
-    try{const s=localStorage.getItem("hospital_config");return s?JSON.parse(s):{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",version:"v5.0",primaryColor:"#0f2a56"};}
-    catch{return{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",version:"v5.0",primaryColor:"#0f2a56"};}
+    try{const s=localStorage.getItem("hospital_config");return s?JSON.parse(s):{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",nit:"",director:"",directorTitle:"Director General",pharmacyChief:"",version:"v5.0",primaryColor:"#0f2a56"};}
+    catch{return{name:"HospitalSYS",slogan:"v5.0 — Guatemala",description:"",logo:null,phone:"",email:"",address:"",nit:"",director:"",directorTitle:"Director General",pharmacyChief:"",version:"v5.0",primaryColor:"#0f2a56"};}
   });
 
   // Guarda data en localStorage cada vez que cambia
@@ -3054,6 +3377,7 @@ export default function App(){
 
   const sessionUser=data.roles.find(r=>r.user===loggedUser)||data.roles[0];
   const userPerms=useMemo(()=>{const base=BASE_PERMS[sessionUser.role]||[];return[...new Set([...base,...(sessionUser.extraPerms||[])])];},[ sessionUser]);
+  const [purchasePreFill,setPurchasePreFill]=useState(null);
   const alertCount=[...data.pharmacy,...data.inventory].filter(i=>{const el=expiryLevel(i.expiry);return el==="vencido"||el==="critico"||el==="pronto"||(i.stock??i.qty)<i.minStock;}).length+data.returns.filter(r=>r.status==="Pendiente").length;
 
   const views={
@@ -3069,11 +3393,11 @@ export default function App(){
     beds:<Beds data={data} setData={setDataPersist}/>,
     icu:<ICU data={data}/>,
     surgery:<Surgery data={data}/>,
-    lab:<Lab data={data} setData={setDataPersist}/>,
-    pharmacy:<Pharmacy data={data} setData={setDataPersist}/>,
+    lab:<Lab data={data} setData={setDataPersist} hospital={hospital}/>,
+    pharmacy:<Pharmacy data={data} setData={setDataPersist} setActive={setActive} setPurchasePreFill={setPurchasePreFill}/>,
     inventory:<Inventory data={data} setData={setDataPersist}/>,
-    purchases:<Purchases data={data} setData={setDataPersist}/>,
-    returns:<Returns data={data} setData={setDataPersist}/>,
+    purchases:<Purchases data={data} setData={setDataPersist} preFill={purchasePreFill} clearPreFill={()=>setPurchasePreFill(null)}/>,
+    returns:<Returns data={data} setData={setDataPersist} hospital={hospital} setActive={setActive} setPurchasePreFill={setPurchasePreFill}/>,
     suppliers:<Suppliers data={data} setData={setDataPersist}/>,
     payments:<Payments data={data} setData={setDataPersist} hospital={hospital}/>,
     reports:<Reports data={data} hospital={hospital}/>,
