@@ -1848,6 +1848,10 @@ function Purchases({data,setData,preFill,clearPreFill}){
               </div>
             )}
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Recibido por"><Input value={form.receivedBy} onChange={e=>setForm(f=>({...f,receivedBy:e.target.value}))} placeholder="Nombre del responsable"/></Field>
+            <Field label="Estado">
               <Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                 {["Pendiente","Recibida","Cancelada"].map(s=><option key={s}>{s}</option>)}
               </Select>
