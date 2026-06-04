@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { useState, useRef, useMemo } from "react";
 
 // ─── Permisos ─────────────────────────────────────────────────────────────────
 const BASE_PERMS = {
-  "Administrador":       ["dashboard","patients","appointments","calendar","shifts","beds","icu","surgery","assign_surgery","lab","pharmacy","inventory","suppliers","payments","reports","staff","roles","meds_dose","returns","alerts","clinics","consultations","prescriptions","maintenance"],
+  "Administrador":       ["dashboard","patients","appointments","calendar","shifts","beds","icu","surgery","assign_surgery","lab","pharmacy","inventory","purchases","suppliers","payments","reports","staff","roles","meds_dose","returns","alerts","clinics","consultations","prescriptions","maintenance"],
   "Médico":              ["dashboard","patients","appointments","calendar","lab","consultations","prescriptions"],
   "Médico+Cirugía":      ["dashboard","patients","appointments","calendar","surgery","assign_surgery","lab","consultations","prescriptions"],
   "Enfermera/o":         ["dashboard","patients","beds","meds_dose"],
@@ -39,6 +38,7 @@ const MODULES = [
   { id:"lab",            label:"Laboratorios",     icon:"🧪" },
   { id:"pharmacy",       label:"Farmacia",         icon:"💉" },
   { id:"inventory",      label:"Inventario",       icon:"📦" },
+  { id:"purchases",      label:"Compras",          icon:"🛒" },
   { id:"returns",        label:"Devoluciones",     icon:"↩️"  },
   { id:"suppliers",      label:"Proveedores",      icon:"🏭" },
   { id:"payments",       label:"Pagos",            icon:"💳" },
@@ -168,6 +168,7 @@ const INITIAL_DATA = {
     { id:"R006", name:"Lucía Barrera",         user:"lbarrera@hospital.gt",  role:"Secretaria/o",        dept:"Dirección",    active:true,  staffId:"E008",extraPerms:[], photo:null },
     { id:"R007", name:"Dr. Luis Cifuentes",    user:"lcifuentes@hospital.gt",role:"Médico",              dept:"UCI",          active:true,  staffId:"E003",extraPerms:["assign_surgery","consultations","prescriptions"], photo:null },
   ],
+  purchases: [],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -458,7 +459,7 @@ function Consultations({data,setData}){
 // ══════════════════════════════════════════════════════════════════════════════
 // RECETAS
 // ══════════════════════════════════════════════════════════════════════════════
-function Prescriptions({data,setData}){
+function Prescriptions({data,setData,hospital}){
   const [showForm,setShowForm]=useState(false);
   const [selected,setSelected]=useState(null);
   const blankItem={drug:"",drugId:"",source:"interna",dose:"",route:"Oral",freq:"Cada 8h",days:"",qty:"",notes:""};
@@ -502,6 +503,22 @@ function Prescriptions({data,setData}){
                 <Badge val={rx.status} map={statusRx}/>
                 {rx.dispensada?<span className="bg-emerald-400 text-white text-xs px-2 py-0.5 rounded-full font-bold">✓ Dispensada</span>:<span className="bg-amber-300 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold">Pendiente</span>}
                 <button onClick={()=>openEdit(rx)} className="text-xs bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg font-semibold">Editar</button>
+                <button onClick={()=>{
+                  const w=window.open("","_blank");
+                  const h=hospital;
+                  w.document.write(`<html><head><title>Receta ${rx.id}</title><style>body{font-family:sans-serif;padding:24px;max-width:600px;margin:0 auto}h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #ccc;padding-bottom:4px}table{width:100%;border-collapse:collapse}td,th{padding:6px;text-align:left;font-size:13px;border-bottom:1px solid #eee}.header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #0f2a56;padding-bottom:12px;margin-bottom:16px}.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:bold;margin:2px}.ext{background:#fef3c7;color:#92400e}.int{background:#dbeafe;color:#1e40af}@media print{button{display:none}}</style></head><body>
+                  <div class="header">${h.logo?`<img src="${h.logo}" style="width:56px;height:56px;border-radius:12px;object-fit:contain;background:#f1f5f9;padding:4px">`:`<div style="width:56px;height:56px;border-radius:12px;background:#0f2a56;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:900">${h.name?.[0]||"H"}</div>`}
+                  <div><strong style="font-size:18px">${h.name||"HospitalSYS"}</strong>${h.slogan?`<br><em style="color:#64748b;font-size:13px">${h.slogan}</em>`:""} ${h.address?`<br><span style="font-size:12px;color:#94a3b8">${h.address}</span>`:""} ${h.phone?`<br><span style="font-size:12px;color:#94a3b8">Tel: ${h.phone}</span>`:""}</div>
+                  <div style="margin-left:auto;text-align:right"><span style="font-size:12px;color:#94a3b8">Fecha</span><br><strong>${rx.date}</strong></div></div>
+                  <h1>Receta Médica — ${rx.id}</h1>
+                  <table><tr><th>Paciente</th><td>${rx.patient}</td><th>Médico</th><td>${rx.doctor}</td></tr><tr><th>Diagnóstico</th><td colspan="3">${rx.dx}</td></tr></table>
+                  <h2>Medicamentos</h2>
+                  <table><tr style="background:#f8fafc"><th>Medicamento</th><th>Dosis</th><th>Vía</th><th>Frecuencia</th><th>Días</th><th>Tipo</th></tr>
+                  ${rx.items.map(it=>`<tr><td><strong>${it.drug}</strong>${it.notes?`<br><em style="font-size:11px;color:#94a3b8">${it.notes}</em>`:""}</td><td>${it.dose}</td><td>${it.route}</td><td>${it.freq}</td><td>${it.days}</td><td><span class="${it.source==="externa"?"ext":"int"}">${it.source==="externa"?"Compra externa":"Farmacia interna"}</span></td></tr>`).join("")}
+                  </table>
+                  <br><div style="border-top:1px solid #e2e8f0;padding-top:12px;display:flex;justify-content:space-between;font-size:12px;color:#94a3b8"><span>${h.name||"HospitalSYS"} · ${h.phone||""}</span><span>Impreso: ${new Date().toLocaleDateString("es-GT")}</span></div>
+                  <script>window.onload=()=>window.print()</script></body></html>`);w.document.close();
+                }} className="text-xs bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200 px-2 py-1 rounded-lg font-semibold">🖨️ PDF</button>
               </div>
             </div>
             <div className="px-6 py-4">
@@ -1279,25 +1296,82 @@ function Surgery({data}){
   );
 }
 
-function Lab({data}){
+// ─── Componente de impresión de recibo ────────────────────────────────────────
+function Receipt({payment,hospital,onClose}){
   return(
-    <div className="space-y-5 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Laboratorios</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">{["Completado","En proceso","Pendiente"].map(s=><div key={s} className="bg-white rounded-2xl shadow border border-slate-100 p-4 text-center"><div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{data.lab.filter(l=>l.status===s).length}</div><div className="text-xs text-slate-500 mt-1 font-semibold">{s}</div></div>)}</div>
-      <Table cols={["ID","Paciente","Examen","Fecha","Estado","Resultado","Costo"]} rows={data.lab}
-        renderRow={r=>(<><TD><span className="font-mono text-blue-700 font-bold">{r.id}</span></TD><TD>{r.patient}</TD><TD>{r.test}</TD><TD>{r.ordered}</TD><TD><Badge val={r.status} map={statusLab}/></TD><TD><span className={r.result==="Normal"?"text-emerald-600 font-semibold":r.result==="—"?"text-slate-400":"text-amber-600 font-semibold"}>{r.result}</span></TD><TD><span className="text-emerald-700 font-bold">{Qtz(r.cost)}</span></TD></>)}
-      />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header */}
+        <div className="p-6 text-center" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
+          {hospital.logo?<img src={hospital.logo} className="w-12 h-12 mx-auto rounded-xl object-contain bg-white/10 p-1 mb-2"/>
+            :<div className="w-12 h-12 mx-auto rounded-xl bg-sky-400 flex items-center justify-center text-xl font-black text-white mb-2">{hospital.name?.[0]||"H"}</div>}
+          <p className="font-extrabold text-white text-lg">{hospital.name||"HospitalSYS"}</p>
+          {hospital.address&&<p className="text-blue-300 text-xs mt-1">{hospital.address}</p>}
+          {hospital.phone&&<p className="text-blue-300 text-xs">Tel: {hospital.phone}</p>}
+        </div>
+        {/* Body */}
+        <div className="p-5 space-y-3">
+          <div className="text-center border-b border-dashed border-slate-200 pb-3">
+            <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Recibo de Pago</p>
+            <p className="text-2xl font-extrabold text-blue-700 mt-1">{payment.id}</p>
+            <p className="text-xs text-slate-500">{payment.date}</p>
+          </div>
+          <div className="space-y-2">
+            {[["Paciente",payment.patient],["Concepto",payment.concept],["Método",payment.method],payment.authCode?["No. Autorización",payment.authCode]:null,["Estado",payment.status]].filter(Boolean).map(([k,v])=>(
+              <div key={k} className="flex justify-between items-start">
+                <span className="text-xs text-slate-400 font-semibold uppercase">{k}</span>
+                <span className="text-sm text-slate-700 font-semibold text-right max-w-48">{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center">
+            <span className="text-base font-bold text-slate-700">TOTAL</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{Qtz(payment.amount)}</span>
+          </div>
+          {hospital.slogan&&<p className="text-center text-xs text-slate-400 italic pt-1">{hospital.slogan}</p>}
+        </div>
+        {/* Actions */}
+        <div className="px-5 pb-5 flex gap-2">
+          <button onClick={()=>window.print()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors">🖨️ Imprimir</button>
+          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">Cerrar</button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Pharmacy({data}){
-  const alerts=data.pharmacy.filter(f=>["vencido","critico"].includes(expiryLevel(f.expiry))||f.stock<f.minStock*0.5);
+// ══════════════════════════════════════════════════════════════════════════════
+// FARMACIA — CRUD completo
+// ══════════════════════════════════════════════════════════════════════════════
+function Pharmacy({data,setData}){
+  const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
+  const blank={id:"",drug:"",stock:0,unit:"comp",reorder:30,price:"",supplier:"",expiry:"",minStock:50};
+  const [form,setForm]=useState(blank);
+  const [search,setSearch]=useState("");
+  const openNew=()=>{setForm({...blank,id:`F${String(data.pharmacy.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
+  const openEdit=f=>{setForm({...f});setSelected(f.id);setShowForm(true);};
+  const del=id=>{ if(!window.confirm("¿Eliminar este medicamento?"))return; setData(d=>({...d,pharmacy:d.pharmacy.filter(f=>f.id!==id)}));};
+  const save=()=>{
+    if(!form.drug.trim())return;
+    const status=form.stock===0?"Agotado":form.stock<form.minStock?"Bajo":"OK";
+    const entry={...form,stock:Number(form.stock),price:Number(form.price),reorder:Number(form.reorder),minStock:Number(form.minStock),status};
+    setData(d=>({...d,pharmacy:selected?d.pharmacy.map(f=>f.id===selected?entry:f):[...d.pharmacy,entry]}));
+    setShowForm(false);
+  };
+  const filtered=data.pharmacy.filter(f=>f.drug.toLowerCase().includes(search.toLowerCase()));
+  const alerts=filtered.filter(f=>["vencido","critico"].includes(expiryLevel(f.expiry))||f.stock<f.minStock*0.5);
+  const UNITS=["comp","cáps","amp","vial","mL","mg","g","bolsa","sobre","frasco","unid"];
   return(
-    <div className="space-y-5 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Farmacia</h2>
-      {alerts.length>0&&<div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-2"><p className="text-sm font-bold text-red-700">⚠️ {alerts.length} alerta{alerts.length>1?"s":""} activa{alerts.length>1?"s":""}</p><div className="flex flex-wrap gap-2">{alerts.map(f=><span key={f.id} className="text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-full font-bold">{f.drug}</span>)}</div></div>}
-      <Table cols={["ID","Medicamento","Stock","Mín.","Unidad","Precio","Vencimiento","Estado",""]} rows={data.pharmacy}
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Farmacia</h2>
+        <div className="flex gap-2 flex-wrap">
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar medicamento…" className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 shadow-sm w-48"/>
+          <Btn onClick={openNew}>＋ Nuevo medicamento</Btn>
+        </div>
+      </div>
+      {alerts.length>0&&<div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-2"><p className="text-sm font-bold text-red-700">⚠️ {alerts.length} alerta{alerts.length>1?"s":""}</p><div className="flex flex-wrap gap-2">{alerts.map(f=><span key={f.id} className="text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-full font-bold">{f.drug}</span>)}</div></div>}
+      <Table cols={["ID","Medicamento","Stock","Mín.","Unidad","Precio unit.","Vencimiento","Estado","Proveedor",""]} rows={filtered}
         renderRow={f=>(
           <tr key={f.id} className="border-b border-slate-100 hover:bg-blue-50 transition-colors">
             <TD><span className="font-mono text-blue-700 font-bold">{f.id}</span></TD>
@@ -1309,20 +1383,78 @@ function Pharmacy({data}){
             <TD><ExpiryChip expiry={f.expiry}/></TD>
             <TD><StockChip qty={f.stock} minStock={f.minStock}/></TD>
             <TD><span className="text-xs text-slate-400">{f.supplier}</span></TD>
+            <td className="px-3 py-3">
+              <div className="flex gap-2">
+                <button onClick={()=>openEdit(f)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+                <button onClick={()=>del(f.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+              </div>
+            </td>
           </tr>
         )}
       />
+      {showForm&&(
+        <Modal title={selected?"Editar Medicamento":"Nuevo Medicamento"} onClose={()=>setShowForm(false)} wide>
+          <Field label="Nombre del medicamento"><Input value={form.drug} onChange={e=>setForm(f=>({...f,drug:e.target.value}))} placeholder="ej. Amoxicilina 500mg"/></Field>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Stock actual"><Input type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))}/></Field>
+            <Field label="Stock mínimo"><Input type="number" value={form.minStock} onChange={e=>setForm(f=>({...f,minStock:e.target.value}))}/></Field>
+            <Field label="Punto de reorden"><Input type="number" value={form.reorder} onChange={e=>setForm(f=>({...f,reorder:e.target.value}))}/></Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Unidad">
+              <Select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}>
+                {UNITS.map(u=><option key={u}>{u}</option>)}
+              </Select>
+            </Field>
+            <Field label="Precio unitario (Q)"><Input type="number" step="0.01" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))}/></Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Proveedor">
+              <Select value={form.supplier} onChange={e=>setForm(f=>({...f,supplier:e.target.value}))}>
+                <option value="">— Seleccionar —</option>
+                {data.suppliers.map(s=><option key={s.id}>{s.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Fecha de vencimiento"><Input type="date" value={form.expiry} onChange={e=>setForm(f=>({...f,expiry:e.target.value}))}/></Field>
+          </div>
+          <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-function Inventory({data}){
-  const alerts=data.inventory.filter(i=>["vencido","critico"].includes(expiryLevel(i.expiry))||i.qty<i.minStock*0.5);
+// ══════════════════════════════════════════════════════════════════════════════
+// INVENTARIO — CRUD completo
+// ══════════════════════════════════════════════════════════════════════════════
+function Inventory({data,setData}){
+  const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
+  const blank={id:"",item:"",qty:0,unit:"unid",reorder:50,category:"Insumo",cost:"",supplier:"",expiry:null,minStock:80};
+  const [form,setForm]=useState(blank);
+  const [search,setSearch]=useState("");
+  const openNew=()=>{setForm({...blank,id:`I${String(data.inventory.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
+  const openEdit=i=>{setForm({...i});setSelected(i.id);setShowForm(true);};
+  const del=id=>{ if(!window.confirm("¿Eliminar este artículo?"))return; setData(d=>({...d,inventory:d.inventory.filter(i=>i.id!==id)}));};
+  const save=()=>{
+    if(!form.item.trim())return;
+    const entry={...form,qty:Number(form.qty),cost:Number(form.cost),reorder:Number(form.reorder),minStock:Number(form.minStock),expiry:form.expiry||null};
+    setData(d=>({...d,inventory:selected?d.inventory.map(i=>i.id===selected?entry:i):[...d.inventory,entry]}));
+    setShowForm(false);
+  };
+  const filtered=data.inventory.filter(i=>i.item.toLowerCase().includes(search.toLowerCase()));
+  const alerts=filtered.filter(i=>["vencido","critico"].includes(expiryLevel(i.expiry))||i.qty<i.minStock*0.5);
+  const CATS=["EPP","Insumo","Soluciones","Equipo","Limpieza","Oficina","Otro"];
   return(
-    <div className="space-y-5 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Inventario y Bodega</h2>
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Inventario y Bodega</h2>
+        <div className="flex gap-2 flex-wrap">
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar artículo…" className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 shadow-sm w-48"/>
+          <Btn onClick={openNew}>＋ Nuevo artículo</Btn>
+        </div>
+      </div>
       {alerts.length>0&&<div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2"><p className="text-sm font-bold text-amber-700">📦 {alerts.length} alerta{alerts.length>1?"s":""}</p><div className="flex flex-wrap gap-2">{alerts.map(i=><span key={i.id} className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-1 rounded-full font-bold">{i.item}</span>)}</div></div>}
-      <Table cols={["ID","Artículo","Qty","Mín.","Unidad","Costo","Vencimiento","Stock","Categoría"]} rows={data.inventory}
+      <Table cols={["ID","Artículo","Qty","Mín.","Unidad","Costo unit.","Vencimiento","Stock","Categoría","Proveedor",""]} rows={filtered}
         renderRow={i=>(
           <tr key={i.id} className="border-b border-slate-100 hover:bg-blue-50 transition-colors">
             <TD><span className="font-mono text-blue-700 font-bold">{i.id}</span></TD>
@@ -1334,9 +1466,428 @@ function Inventory({data}){
             <TD><ExpiryChip expiry={i.expiry}/></TD>
             <TD><StockChip qty={i.qty} minStock={i.minStock}/></TD>
             <TD>{i.category}</TD>
+            <TD><span className="text-xs text-slate-400">{i.supplier}</span></TD>
+            <td className="px-3 py-3">
+              <div className="flex gap-2">
+                <button onClick={()=>openEdit(i)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+                <button onClick={()=>del(i.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+              </div>
+            </td>
           </tr>
         )}
       />
+      {showForm&&(
+        <Modal title={selected?"Editar Artículo":"Nuevo Artículo"} onClose={()=>setShowForm(false)} wide>
+          <Field label="Nombre del artículo"><Input value={form.item} onChange={e=>setForm(f=>({...f,item:e.target.value}))} placeholder="ej. Guantes nitrilo (M)"/></Field>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Cantidad"><Input type="number" value={form.qty} onChange={e=>setForm(f=>({...f,qty:e.target.value}))}/></Field>
+            <Field label="Stock mínimo"><Input type="number" value={form.minStock} onChange={e=>setForm(f=>({...f,minStock:e.target.value}))}/></Field>
+            <Field label="Punto de reorden"><Input type="number" value={form.reorder} onChange={e=>setForm(f=>({...f,reorder:e.target.value}))}/></Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Unidad"><Input value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}/></Field>
+            <Field label="Costo unitario (Q)"><Input type="number" step="0.01" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))}/></Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Categoría">
+              <Select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
+                {CATS.map(c=><option key={c}>{c}</option>)}
+              </Select>
+            </Field>
+            <Field label="Proveedor">
+              <Select value={form.supplier} onChange={e=>setForm(f=>({...f,supplier:e.target.value}))}>
+                <option value="">— Seleccionar —</option>
+                {data.suppliers.map(s=><option key={s.id}>{s.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <Field label="Fecha de vencimiento (si aplica)"><Input type="date" value={form.expiry||""} onChange={e=>setForm(f=>({...f,expiry:e.target.value||null}))}/></Field>
+          <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPRAS — Órdenes de compra con recibo de ingreso
+// ══════════════════════════════════════════════════════════════════════════════
+function Purchases({data,setData}){
+  const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
+  const [showReceipt,setShowReceipt]=useState(null);
+  const blankItem={type:"farmacia",itemId:"",item:"",qty:"",unitCost:"",unit:""};
+  const blank={id:"",supplierId:"",supplier:"",date:TODAY,items:[{...blankItem}],total:0,status:"Pendiente",notes:"",receivedBy:""};
+  const [form,setForm]=useState(blank);
+
+  const openNew=()=>{setForm({...blank,id:`OC${String((data.purchases||[]).length+1).padStart(3,"0")}`,items:[{...blankItem}]});setSelected(null);setShowForm(true);};
+  const openEdit=p=>{setForm({...p,items:p.items.map(i=>({...i}))});setSelected(p.id);setShowForm(true);};
+
+  const addItem=()=>setForm(f=>({...f,items:[...f.items,{...blankItem}]}));
+  const removeItem=idx=>setForm(f=>({...f,items:f.items.filter((_,i)=>i!==idx)}));
+  const updateItem=(idx,field,val)=>setForm(f=>({...f,items:f.items.map((it,i)=>i===idx?{...it,[field]:val}:it)}));
+  const calcTotal=items=>items.reduce((a,it)=>a+Number(it.qty||0)*Number(it.unitCost||0),0);
+
+  const save=(autoReceive=false)=>{
+    if(!form.supplierId)return;
+    const sup=data.suppliers.find(s=>s.id===form.supplierId);
+    const total=calcTotal(form.items);
+    const entry={...form,supplier:sup?.name||form.supplier,total,status:autoReceive?"Recibida":form.status};
+
+    let newPharm=[...data.pharmacy];
+    let newInv=[...data.inventory];
+
+    if(autoReceive||form.status==="Recibida"){
+      entry.items.forEach(it=>{
+        if(it.type==="farmacia"&&it.itemId){
+          newPharm=newPharm.map(f=>f.id===it.itemId?{...f,stock:f.stock+Number(it.qty)}:f);
+        } else if(it.type==="inventario"&&it.itemId){
+          newInv=newInv.map(i=>i.id===it.itemId?{...i,qty:i.qty+Number(it.qty)}:i);
+        }
+      });
+    }
+
+    const purchases=data.purchases||[];
+    setData(d=>({...d,
+      purchases:selected?purchases.map(p=>p.id===selected?entry:p):[...purchases,entry],
+      pharmacy:newPharm,inventory:newInv
+    }));
+    setShowForm(false);
+  };
+
+  const purchases=data.purchases||[];
+  const statusP={"Pendiente":"bg-amber-100 text-amber-700","Recibida":"bg-emerald-100 text-emerald-700","Cancelada":"bg-red-100 text-red-700"};
+
+  return(
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Compras</h2>
+          <p className="text-slate-500 text-sm">Órdenes de compra a proveedores con recibo de ingreso</p>
+        </div>
+        <Btn onClick={openNew}>＋ Nueva orden de compra</Btn>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card title="Total órdenes" value={purchases.length} color="" sub="registradas"/>
+        <Card title="Pendientes" value={purchases.filter(p=>p.status==="Pendiente").length} color="" sub="por recibir"/>
+        <Card title="Recibidas" value={purchases.filter(p=>p.status==="Recibida").length} color="" sub="completadas"/>
+        <Card title="Total compras" value={Qtz(purchases.filter(p=>p.status==="Recibida").reduce((a,p)=>a+Number(p.total),0))} color="" sub="recibidas"/>
+      </div>
+
+      {purchases.length===0&&(
+        <div className="text-center py-16 text-slate-400 bg-white rounded-2xl shadow border border-slate-100">
+          <div className="text-5xl mb-3">🛒</div>
+          <p className="font-semibold">Sin órdenes de compra registradas</p>
+          <p className="text-sm mt-1">Crea una orden para reponer farmacia o inventario</p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {purchases.map(p=>(
+          <div key={p.id} className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+            <div className="bg-[#0f2a56] px-5 py-3 flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-mono text-blue-200 font-bold">{p.id}</span>
+                <span className="font-bold text-white">{p.supplier}</span>
+                <span className="text-blue-300 text-xs">{p.date}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge val={p.status} map={statusP}/>
+                <span className="text-emerald-300 font-bold">{Qtz(p.total)}</span>
+                <button onClick={()=>openEdit(p)} className="text-xs bg-white/20 text-white px-2 py-1 rounded-lg font-bold">Editar</button>
+                <button onClick={()=>setShowReceipt(p)} className="text-xs bg-emerald-400/30 text-emerald-200 px-2 py-1 rounded-lg font-bold">🧾 Recibo</button>
+              </div>
+            </div>
+            <div className="px-5 py-3">
+              <div className="space-y-1">
+                {p.items.map((it,i)=>(
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-slate-700">{it.item} <span className="text-xs text-slate-400">({it.type})</span></span>
+                    <span className="text-slate-500">{it.qty} {it.unit} × {Qtz(it.unitCost)} = <span className="font-bold text-slate-700">{Qtz(Number(it.qty)*Number(it.unitCost))}</span></span>
+                  </div>
+                ))}
+              </div>
+              {p.notes&&<p className="text-xs text-slate-400 mt-2 italic">{p.notes}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Recibo de ingreso */}
+      {showReceipt&&(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-5 text-center" style={{background:"linear-gradient(135deg,#0a1f44,#0f2a56)"}}>
+              <p className="font-extrabold text-white text-lg">Recibo de Ingreso</p>
+              <p className="text-blue-300 text-sm">{showReceipt.id} — {showReceipt.date}</p>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                {[["Proveedor",showReceipt.supplier],["Estado",showReceipt.status],["Recibido por",showReceipt.receivedBy||"—"],["Fecha",showReceipt.date]].map(([k,v])=>(
+                  <div key={k}><p className="text-xs text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-700 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              <div className="border-t border-slate-200 pt-3 space-y-2">
+                <p className="text-xs font-bold text-slate-500 uppercase">Artículos recibidos</p>
+                {showReceipt.items.map((it,i)=>(
+                  <div key={i} className="flex justify-between text-sm border-b border-slate-100 pb-1">
+                    <span className="text-slate-700">{it.item}</span>
+                    <span className="text-slate-600">{it.qty} {it.unit} × {Qtz(it.unitCost)}</span>
+                    <span className="font-bold text-slate-800">{Qtz(Number(it.qty)*Number(it.unitCost))}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-base font-extrabold pt-1">
+                  <span>TOTAL</span>
+                  <span className="text-emerald-700">{Qtz(showReceipt.total)}</span>
+                </div>
+              </div>
+              {showReceipt.notes&&<p className="text-xs text-slate-400 italic">{showReceipt.notes}</p>}
+            </div>
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={()=>window.print()} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold">🖨️ Imprimir</button>
+              <button onClick={()=>setShowReceipt(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForm&&(
+        <Modal title={selected?"Editar Orden":"Nueva Orden de Compra"} onClose={()=>setShowForm(false)} extraWide>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Proveedor">
+              <Select value={form.supplierId} onChange={e=>setForm(f=>({...f,supplierId:e.target.value}))}>
+                <option value="">— Seleccionar —</option>
+                {data.suppliers.filter(s=>s.status==="Activo").map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Fecha"><Input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field>
+          </div>
+
+          <div className="border-t border-slate-200 pt-3">
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Artículos a comprar</p>
+              <button onClick={addItem} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold">＋ Agregar</button>
+            </div>
+            {form.items.map((it,idx)=>(
+              <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-3 space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <button onClick={()=>updateItem(idx,"type","farmacia")} className={`text-xs px-3 py-1 rounded-full font-bold border transition-all ${it.type==="farmacia"?"bg-blue-600 text-white border-blue-600":"bg-white text-slate-500 border-slate-300"}`}>💊 Farmacia</button>
+                    <button onClick={()=>updateItem(idx,"type","inventario")} className={`text-xs px-3 py-1 rounded-full font-bold border transition-all ${it.type==="inventario"?"bg-emerald-600 text-white border-emerald-600":"bg-white text-slate-500 border-slate-300"}`}>📦 Inventario</button>
+                  </div>
+                  {form.items.length>1&&<button onClick={()=>removeItem(idx)} className="text-red-500 font-bold text-lg">✕</button>}
+                </div>
+                {it.type==="farmacia"?(
+                  <Field label="Medicamento">
+                    <Select value={it.itemId} onChange={e=>{const d=data.pharmacy.find(f=>f.id===e.target.value);updateItem(idx,"itemId",e.target.value);updateItem(idx,"item",d?.drug||"");updateItem(idx,"unit",d?.unit||"");updateItem(idx,"unitCost",d?.price||"");}}>
+                      <option value="">— Seleccionar —</option>
+                      {data.pharmacy.map(f=><option key={f.id} value={f.id}>{f.drug} (Stock:{f.stock} {f.unit})</option>)}
+                    </Select>
+                  </Field>
+                ):(
+                  <Field label="Artículo de inventario">
+                    <Select value={it.itemId} onChange={e=>{const d=data.inventory.find(i=>i.id===e.target.value);updateItem(idx,"itemId",e.target.value);updateItem(idx,"item",d?.item||"");updateItem(idx,"unit",d?.unit||"");updateItem(idx,"unitCost",d?.cost||"");}}>
+                      <option value="">— Seleccionar —</option>
+                      {data.inventory.map(i=><option key={i.id} value={i.id}>{i.item} (Qty:{i.qty} {i.unit})</option>)}
+                    </Select>
+                  </Field>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  <Field label="Cantidad"><Input type="number" value={it.qty} onChange={e=>updateItem(idx,"qty",e.target.value)}/></Field>
+                  <Field label="Unidad"><Input value={it.unit} onChange={e=>updateItem(idx,"unit",e.target.value)}/></Field>
+                  <Field label="Costo unit. (Q)"><Input type="number" step="0.01" value={it.unitCost} onChange={e=>updateItem(idx,"unitCost",e.target.value)}/></Field>
+                </div>
+                <p className="text-right text-sm font-bold text-slate-700">Subtotal: {Qtz(Number(it.qty||0)*Number(it.unitCost||0))}</p>
+              </div>
+            ))}
+            <div className="flex justify-between items-center bg-blue-50 rounded-xl px-4 py-3 border border-blue-200">
+              <span className="font-bold text-blue-800">TOTAL ORDEN</span>
+              <span className="text-xl font-extrabold text-blue-700">{Qtz(calcTotal(form.items))}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Recibido por"><Input value={form.receivedBy} onChange={e=>setForm(f=>({...f,receivedBy:e.target.value}))} placeholder="Nombre del responsable"/></Field>
+            <Field label="Estado">
+              <Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
+                {["Pendiente","Recibida","Cancelada"].map(s=><option key={s}>{s}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <Field label="Notas"><Input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observaciones de la orden…"/></Field>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 font-semibold">
+            💡 Al marcar como "Recibida" el stock se actualiza automáticamente en farmacia e inventario.
+          </div>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Btn onClick={()=>save(false)}>Guardar borrador</Btn>
+            <Btn variant="success" onClick={()=>save(true)}>✅ Recibir y actualizar stock</Btn>
+            <Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LABORATORIO — CRUD completo con tipos de prueba
+// ══════════════════════════════════════════════════════════════════════════════
+function Lab({data,setData}){
+  const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
+  const [showTypes,setShowTypes]=useState(false);
+  const blank={id:"",patientId:"",patient:"",test:"",testType:"",ordered:TODAY,status:"Pendiente",result:"",resultDetail:"",cost:"",techId:"",tech:"",notes:""};
+  const [form,setForm]=useState(blank);
+  const [search,setSearch]=useState("");
+
+  // Tipos de prueba editables
+  const [labTypes,setLabTypes]=useState(()=>{
+    try{const s=localStorage.getItem("lab_types");return s?JSON.parse(s):[
+      {id:"LT001",name:"Hemograma completo",category:"Hematología",description:"Conteo de células sanguíneas",resultType:"Cuantitativo",price:85},
+      {id:"LT002",name:"Glucosa en ayunas",category:"Química",description:"Nivel de glucosa en sangre",resultType:"Cuantitativo",price:65},
+      {id:"LT003",name:"Gasometría arterial",category:"Gases",description:"Análisis de gases en sangre arterial",resultType:"Cuantitativo",price:220},
+      {id:"LT004",name:"PCR Covid",category:"Molecular",description:"Prueba PCR para SARS-CoV-2",resultType:"Cualitativo",price:150},
+      {id:"LT005",name:"Hemoglobina glicosilada",category:"Química",description:"Control de glucosa a largo plazo",resultType:"Cuantitativo",price:180},
+      {id:"LT006",name:"Urocultivo",category:"Microbiología",description:"Cultivo de orina",resultType:"Descriptivo",price:120},
+    ];}catch{return[];}
+  });
+  const [showTypeForm,setShowTypeForm]=useState(false);const [selectedType,setSelectedType]=useState(null);
+  const blankType={id:"",name:"",category:"Hematología",description:"",resultType:"Cuantitativo",price:""};
+  const [typeForm,setTypeForm]=useState(blankType);
+  const LAB_CATS=["Hematología","Química","Molecular","Microbiología","Gases","Inmunología","Hormonas","Orina","Heces","Otro"];
+  const RESULT_TYPES=["Cuantitativo","Cualitativo","Descriptivo","Imagen"];
+
+  const saveLabTypes=(types)=>{setLabTypes(types);try{localStorage.setItem("lab_types",JSON.stringify(types));}catch{}};
+  const openNewType=()=>{setTypeForm({...blankType,id:`LT${String(labTypes.length+1).padStart(3,"0")}`});setSelectedType(null);setShowTypeForm(true);};
+  const openEditType=t=>{setTypeForm({...t});setSelectedType(t.id);setShowTypeForm(true);};
+  const saveType=()=>{if(!typeForm.name.trim())return;const entry={...typeForm,price:Number(typeForm.price)};saveLabTypes(selectedType?labTypes.map(t=>t.id===selectedType?entry:t):[...labTypes,entry]);setShowTypeForm(false);};
+  const delType=id=>{if(!window.confirm("¿Eliminar este tipo de prueba?"))return;saveLabTypes(labTypes.filter(t=>t.id!==id));};
+
+  const openNew=()=>{setForm({...blank,id:`L${String(data.lab.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
+  const openEdit=l=>{setForm({...l});setSelected(l.id);setShowForm(true);};
+  const del=id=>{if(!window.confirm("¿Eliminar este examen?"))return;setData(d=>({...d,lab:d.lab.filter(l=>l.id!==id)}));};
+  const save=()=>{
+    if(!form.patientId||!form.test)return;
+    const t=labTypes.find(x=>x.name===form.test);
+    const entry={...form,cost:form.cost||t?.price||0};
+    setData(d=>({...d,lab:selected?d.lab.map(l=>l.id===selected?entry:l):[...d.lab,entry]}));
+    setShowForm(false);
+  };
+  const filtered=data.lab.filter(l=>l.patient.toLowerCase().includes(search.toLowerCase())||l.test.toLowerCase().includes(search.toLowerCase()));
+  const techs=data.staff.filter(e=>e.category==="Técnico de Laboratorio"&&e.status==="Activo");
+
+  return(
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Laboratorios</h2>
+        <div className="flex gap-2 flex-wrap">
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…" className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 shadow-sm w-44"/>
+          <Btn variant="secondary" onClick={()=>setShowTypes(true)}>⚗️ Tipos de prueba</Btn>
+          <Btn onClick={openNew}>＋ Nuevo examen</Btn>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {["Completado","En proceso","Pendiente"].map(s=>(
+          <div key={s} className="bg-white rounded-2xl shadow border border-slate-100 p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{data.lab.filter(l=>l.status===s).length}</div>
+            <div className="text-xs text-slate-500 mt-1 font-semibold">{s}</div>
+          </div>
+        ))}
+      </div>
+
+      <Table cols={["ID","Paciente","Tipo de prueba","Fecha","Técnico","Estado","Resultado","Costo",""]} rows={filtered}
+        renderRow={l=>(<>
+          <TD><span className="font-mono text-blue-700 font-bold">{l.id}</span></TD>
+          <TD><span className="font-semibold text-slate-800">{l.patient}</span></TD>
+          <TD>{l.test}</TD>
+          <TD>{l.ordered}</TD>
+          <TD><span className="text-xs text-slate-500">{l.tech||"—"}</span></TD>
+          <TD><Badge val={l.status} map={statusLab}/></TD>
+          <TD><span className={l.result==="Normal"?"text-emerald-600 font-semibold":l.result==="—"||!l.result?"text-slate-400":"text-amber-600 font-semibold"}>{l.result||"—"}</span></TD>
+          <TD><span className="text-emerald-700 font-bold">{Qtz(l.cost)}</span></TD>
+          <td className="px-3 py-3">
+            <div className="flex gap-2">
+              <button onClick={()=>openEdit(l)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+              <button onClick={()=>del(l.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+            </div>
+          </td>
+        </>)}
+      />
+
+      {/* Modal: tipos de prueba */}
+      {showTypes&&(
+        <Modal title="Tipos de Prueba de Laboratorio" onClose={()=>setShowTypes(false)} wide>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-xs text-slate-500 uppercase font-bold">Catálogo de pruebas</p>
+            <Btn onClick={openNewType}>＋ Nueva prueba</Btn>
+          </div>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {labTypes.map(t=>(
+              <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-start gap-3">
+                <div className="flex-1">
+                  <p className="font-bold text-slate-800 text-sm">{t.name}</p>
+                  <p className="text-xs text-slate-500">{t.category} · {t.resultType} · {Qtz(t.price)}</p>
+                  {t.description&&<p className="text-xs text-slate-400 italic mt-0.5">{t.description}</p>}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={()=>openEditType(t)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+                  <button onClick={()=>delType(t.id)} className="text-xs text-red-500 font-bold hover:underline">Eliminar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {showTypeForm&&(
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+              <p className="font-bold text-blue-800 text-sm">{selectedType?"Editar prueba":"Nueva prueba"}</p>
+              <Field label="Nombre de la prueba"><Input value={typeForm.name} onChange={e=>setTypeForm(f=>({...f,name:e.target.value}))} placeholder="ej. Hemograma completo"/></Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Categoría"><Select value={typeForm.category} onChange={e=>setTypeForm(f=>({...f,category:e.target.value}))}>{LAB_CATS.map(c=><option key={c}>{c}</option>)}</Select></Field>
+                <Field label="Tipo de resultado"><Select value={typeForm.resultType} onChange={e=>setTypeForm(f=>({...f,resultType:e.target.value}))}>{RESULT_TYPES.map(r=><option key={r}>{r}</option>)}</Select></Field>
+              </div>
+              <Field label="Descripción"><Input value={typeForm.description} onChange={e=>setTypeForm(f=>({...f,description:e.target.value}))}/></Field>
+              <Field label="Precio (Q)"><Input type="number" value={typeForm.price} onChange={e=>setTypeForm(f=>({...f,price:e.target.value}))}/></Field>
+              <div className="flex gap-2"><Btn onClick={saveType}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowTypeForm(false)}>Cancelar</Btn></div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Modal: nuevo/editar examen */}
+      {showForm&&(
+        <Modal title={selected?"Editar Examen":"Nuevo Examen de Laboratorio"} onClose={()=>setShowForm(false)} wide>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Paciente">
+              <Select value={form.patientId} onChange={e=>{const p=data.patients.find(x=>x.id===e.target.value);setForm(f=>({...f,patientId:e.target.value,patient:p?.name||""}));}}>
+                <option value="">—</option>{data.patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Tipo de prueba">
+              <Select value={form.test} onChange={e=>{const t=labTypes.find(x=>x.name===e.target.value);setForm(f=>({...f,test:e.target.value,cost:t?.price||f.cost}));}}>
+                <option value="">— Seleccionar —</option>
+                {labTypes.map(t=><option key={t.id}>{t.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Fecha de solicitud"><Input type="date" value={form.ordered} onChange={e=>setForm(f=>({...f,ordered:e.target.value}))}/></Field>
+            <Field label="Técnico responsable">
+              <Select value={form.techId} onChange={e=>{const t=data.staff.find(x=>x.id===e.target.value);setForm(f=>({...f,techId:e.target.value,tech:t?.name||""}));}}>
+                <option value="">—</option>{techs.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Estado"><Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>{["Pendiente","En proceso","Completado"].map(s=><option key={s}>{s}</option>)}</Select></Field>
+            <Field label="Costo (Q)"><Input type="number" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))}/></Field>
+          </div>
+          <Field label="Resultado (resumen)"><Input value={form.result} onChange={e=>setForm(f=>({...f,result:e.target.value}))} placeholder="ej. Normal, 126 mg/dL, Negativo…"/></Field>
+          <Field label="Detalle del resultado">
+            <textarea value={form.resultDetail} onChange={e=>setForm(f=>({...f,resultDetail:e.target.value}))} rows={3} placeholder="Descripción detallada del resultado..." className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 w-full resize-none"/>
+          </Field>
+          <Field label="Notas adicionales"><Input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/></Field>
+          <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1360,14 +1911,14 @@ function Returns({data,setData}){
   return(
     <div className="space-y-5 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3"><div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Devoluciones</h2><p className="text-slate-500 text-sm">↩️ Canje por vencimiento con proveedor</p></div><Btn onClick={openNew}>＋ Nueva devolución</Btn></div>
-      <div className="grid grid-cols-2 sm:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card title="Total" value={data.returns.length} color="" sub="registradas"/>
         <Card title="Pendientes" value={data.returns.filter(r=>r.status==="Pendiente").length} color="" sub="por aprobar"/>
         <Card title="Aprobadas" value={data.returns.filter(r=>r.status==="Aprobada").length} color="" sub="completadas"/>
         <Card title="Crédito total" value={Qtz(totalCredit)} color="" sub="recuperado"/>
       </div>
       <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4">
-        <p className="text-xs font-bold text-slate-500 uppercase mb-3">Candidatos a devolución por vencimiento</p>
+        <p className="text-xs font-bold text-slate-500 uppercase mb-3">Candidatos por vencimiento</p>
         <div className="flex flex-wrap gap-2">
           {data.pharmacy.filter(f=>["vencido","critico","pronto"].includes(expiryLevel(f.expiry))).map(f=>(
             <button key={f.id} onClick={()=>{setForm({...blank,id:`RET${String(data.returns.length+1).padStart(3,"0")}`,drugId:f.id,drug:f.drug,unit:f.unit,supplier:f.supplier,expiry:f.expiry,reason:expiryLevel(f.expiry)==="vencido"?"Vencido":"Próximo a vencer",credit:(f.price*f.stock).toFixed(2)});setSelected(null);setShowForm(true);}}
@@ -1411,22 +1962,30 @@ function Returns({data,setData}){
   );
 }
 
-function Payments({data,setData}){
+// ══════════════════════════════════════════════════════════════════════════════
+// PAGOS — con recibo imprimible
+// ══════════════════════════════════════════════════════════════════════════════
+function Payments({data,setData,hospital}){
   const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
-  const blank={id:"",patientId:"",patient:"",date:TODAY,amount:"",method:"Efectivo",authCode:"",concept:"",status:"Pendiente",secretary:"Lucía Barrera"};
+  const [showReceipt,setShowReceipt]=useState(null);
+  const blank={id:"",patientId:"",patient:"",date:TODAY,amount:"",method:"Efectivo",authCode:"",concept:"",status:"Pendiente",secretary:"Secretaría"};
   const [form,setForm]=useState(blank);
   const openNew=()=>{setForm({...blank,id:`PAG${String(data.payments.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
   const openEdit=p=>{setForm({...p});setSelected(p.id);setShowForm(true);};
+  const del=id=>{if(!window.confirm("¿Anular este pago?"))return;setData(d=>({...d,payments:d.payments.map(p=>p.id===id?{...p,status:"Anulado"}:p)}));};
   const save=()=>{if(!form.patientId||!form.amount)return;setData(d=>({...d,payments:selected?d.payments.map(p=>p.id===selected?form:p):[...d.payments,form]}));setShowForm(false);};
   const total=data.payments.reduce((a,p)=>a+Number(p.amount),0);
   const cobrado=data.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0);
   return(
     <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2"><div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Pagos de Pacientes</h2><p className="text-slate-500 text-sm">💳 Secretaría registra cobros</p></div><Btn onClick={openNew}>＋ Registrar pago</Btn></div>
-      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Card title="Total facturado" value={Qtz(total)} color=""/>
-        <Card title="Cobrado" value={Qtz(cobrado)} color=""/>
-        <Card title="Por cobrar" value={Qtz(total-cobrado)} color=""/>
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Pagos de Pacientes</h2><p className="text-slate-500 text-sm">💳 Secretaría registra cobros y genera recibos</p></div>
+        <Btn onClick={openNew}>＋ Registrar pago</Btn>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card title="Total facturado" value={Qtz(total)} color="" sub="todos"/>
+        <Card title="Cobrado" value={Qtz(cobrado)} color="" sub="confirmados"/>
+        <Card title="Por cobrar" value={Qtz(total-cobrado)} color="" sub="pendientes"/>
       </div>
       <Table cols={["ID","Paciente","Fecha","Concepto","Método","Autorización","Monto","Estado",""]} rows={data.payments}
         renderRow={r=>(<>
@@ -1436,15 +1995,22 @@ function Payments({data,setData}){
           <TD><span className="font-mono text-xs text-slate-500">{r.authCode||"—"}</span></TD>
           <TD><span className="font-bold text-emerald-700">{Qtz(r.amount)}</span></TD>
           <TD><Badge val={r.status} map={statusPago}/></TD>
-          <td className="px-4 py-2"><button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button></td>
+          <td className="px-3 py-3">
+            <div className="flex gap-1 flex-wrap">
+              <button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+              <button onClick={()=>setShowReceipt(r)} className="text-xs text-emerald-600 font-bold hover:underline">🧾 Recibo</button>
+              {r.status!=="Anulado"&&<button onClick={()=>del(r.id)} className="text-xs text-red-500 font-bold hover:underline">Anular</button>}
+            </div>
+          </td>
         </>)}
       />
+      {showReceipt&&<Receipt payment={showReceipt} hospital={hospital} onClose={()=>setShowReceipt(null)}/>}
       {showForm&&(
         <Modal title={selected?"Editar Pago":"Registrar Pago"} onClose={()=>setShowForm(false)} wide>
           <Field label="Paciente"><Select value={form.patientId} onChange={e=>{const p=data.patients.find(x=>x.id===e.target.value);setForm(f=>({...f,patientId:e.target.value,patient:p?.name||""}));}}><option value="">—</option>{data.patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
           <Field label="Concepto"><Input value={form.concept} onChange={e=>setForm(f=>({...f,concept:e.target.value}))}/></Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><Field label="Monto (Q)"><Input type="number" step="0.01" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/></Field><Field label="Fecha"><Input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field></div>
-          <Field label="Método"><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{["Efectivo","Transferencia"].map(m=><button key={m} onClick={()=>setForm(f=>({...f,method:m,authCode:m==="Efectivo"?"":f.authCode}))} className={`p-4 rounded-xl border text-sm font-bold flex items-center gap-2 justify-center transition-all ${form.method===m?"border-blue-500 bg-blue-600 text-white":"border-slate-300 bg-slate-50 text-slate-600"}`}>{m==="Efectivo"?"💵 Efectivo":"🏦 Transferencia"}</button>)}</div></Field>
+          <Field label="Método"><div className="grid grid-cols-2 gap-3">{["Efectivo","Transferencia"].map(m=><button key={m} onClick={()=>setForm(f=>({...f,method:m,authCode:m==="Efectivo"?"":f.authCode}))} className={`p-4 rounded-xl border text-sm font-bold flex items-center gap-2 justify-center transition-all ${form.method===m?"border-blue-500 bg-blue-600 text-white":"border-slate-300 bg-slate-50 text-slate-600"}`}>{m==="Efectivo"?"💵 Efectivo":"🏦 Transferencia"}</button>)}</div></Field>
           {form.method==="Transferencia"&&<Field label="No. autorización banco"><Input value={form.authCode} onChange={e=>setForm(f=>({...f,authCode:e.target.value}))} placeholder="TRF-XXXXXX"/></Field>}
           <Field label="Estado"><Select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>{["Pendiente","Pagado","Anulado"].map(s=><option key={s}>{s}</option>)}</Select></Field>
           <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
@@ -1455,7 +2021,14 @@ function Payments({data,setData}){
 }
 
 function Roles({data,setData}){
-  const [showForm,setShowForm]=useState(false);const [selected,setSelected]=useState(null);
+  const [showForm,setShowForm]=useState(false);
+  const [selected,setSelected]=useState(null);
+  const [showPassForm,setShowPassForm]=useState(null); // user email
+  const [newPass,setNewPass]=useState("");
+  const [newPass2,setNewPass2]=useState("");
+  const [passError,setPassError]=useState("");
+  const [passSaved,setPassSaved]=useState(false);
+  const [showPassVal,setShowPassVal]=useState(false);
   const blank={id:"",name:"",user:"",role:"Médico",dept:"",active:true,staffId:"",extraPerms:[],photo:null};
   const [form,setForm]=useState(blank);
   const roleColors2={"Administrador":"bg-violet-600 text-white","Médico":"bg-blue-600 text-white","Enfermera/o":"bg-cyan-600 text-white","Secretaria/o":"bg-rose-500 text-white","Técnico Laboratorio":"bg-emerald-600 text-white","Farmacéutico":"bg-amber-500 text-white"};
@@ -1463,34 +2036,124 @@ function Roles({data,setData}){
   const openNew=()=>{setForm({...blank,id:`R${String(data.roles.length+1).padStart(3,"0")}`});setSelected(null);setShowForm(true);};
   const openEdit=r=>{setForm({...r,extraPerms:r.extraPerms||[]});setSelected(r.id);setShowForm(true);};
   const save=()=>{if(!form.user.trim())return;const emp=data.staff.find(e=>e.id===form.staffId);const entry={...form,name:emp?emp.name:form.name,photo:emp?.photo||form.photo};setData(d=>({...d,roles:selected?d.roles.map(r=>r.id===selected?entry:r):[...d.roles,entry]}));setShowForm(false);};
+
+  const openPassForm=(userEmail)=>{
+    setShowPassForm(userEmail);
+    setNewPass("");setNewPass2("");setPassError("");setPassSaved(false);setShowPassVal(false);
+  };
+
+  const savePassword=()=>{
+    if(!newPass||newPass.length<6){setPassError("La contraseña debe tener al menos 6 caracteres");return;}
+    if(newPass!==newPass2){setPassError("Las contraseñas no coinciden");return;}
+    const current=getPasswords();
+    const updated={...current,[showPassForm]:newPass};
+    savePasswords(updated);
+    setPassError("");setPassSaved(true);
+    setTimeout(()=>{setShowPassForm(null);setPassSaved(false);},1500);
+  };
+
+  // Check if user has password set
+  const passwords=getPasswords();
+
   return(
     <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2"><div><h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Roles y Usuarios</h2><p className="text-slate-500 text-sm">⚙️ El Administrador asigna roles y permisos por usuario</p></div><Btn onClick={openNew}>＋ Nuevo usuario</Btn></div>
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Roles y Usuarios</h2>
+          <p className="text-slate-500 text-sm">⚙️ Administra roles, permisos y contraseñas</p>
+        </div>
+        <Btn onClick={openNew}>＋ Nuevo usuario</Btn>
+      </div>
+
+      {/* Tabla */}
       <div className="overflow-x-auto rounded-2xl shadow-md border border-slate-200">
-        <table className="w-full text-sm">
-          <thead><tr className="bg-[#0f2a56]">{["","ID","Nombre","Correo","Rol","Permisos extra","Estado",""].map(c=><th key={c} className="px-4 py-3 text-xs uppercase tracking-wider text-blue-200 font-bold text-left">{c}</th>)}</tr></thead>
+        <table className="w-full text-sm" style={{minWidth:"700px"}}>
+          <thead><tr className="bg-[#0f2a56]">{["","ID","Nombre","Correo","Rol","Permisos extra","Estado","Contraseña",""].map(c=><th key={c} className="px-3 py-3 text-xs uppercase tracking-wider text-blue-200 font-bold text-left whitespace-nowrap">{c}</th>)}</tr></thead>
           <tbody className="bg-white divide-y divide-slate-100">{data.roles.map(r=>{
             const emp=data.staff.find(e=>e.id===r.staffId);
+            const hasPass=!!passwords[r.user];
             return(<tr key={r.id} className="hover:bg-blue-50 transition-colors">
-              <td className="px-4 py-2"><Avatar photo={r.photo||emp?.photo} name={r.name||r.user} size="sm"/></td>
+              <td className="px-3 py-2"><Avatar photo={r.photo||emp?.photo} name={r.name||r.user} size="sm"/></td>
               <TD><span className="font-mono text-blue-700 font-bold">{r.id}</span></TD>
               <TD><span className="font-semibold text-slate-800">{r.name}</span></TD>
               <TD><span className="font-mono text-xs text-slate-500">{r.user}</span></TD>
               <TD><Badge val={r.role} map={roleColors2}/></TD>
-              <td className="px-4 py-3"><div className="flex flex-wrap gap-1">{(r.extraPerms||[]).length===0?<span className="text-xs text-slate-400">—</span>:(r.extraPerms||[]).map(p=>{const pm=ALL_EXTRA_PERMS.find(x=>x.id===p);return pm?<span key={p} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{pm.icon} {pm.label}</span>:null;})}</div></td>
+              <td className="px-3 py-3"><div className="flex flex-wrap gap-1">{(r.extraPerms||[]).length===0?<span className="text-xs text-slate-400">—</span>:(r.extraPerms||[]).map(p=>{const pm=ALL_EXTRA_PERMS.find(x=>x.id===p);return pm?<span key={p} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{pm.icon} {pm.label}</span>:null;})}</div></td>
               <TD><Badge val={r.active?"Activo":"Inactivo"} map={statusGen}/></TD>
-              <td className="px-4 py-2"><button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button></td>
+              <td className="px-3 py-3">
+                {hasPass
+                  ?<span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">✓ Asignada</span>
+                  :<span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">✗ Sin contraseña</span>
+                }
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex gap-1">
+                  <button onClick={()=>openEdit(r)} className="text-xs text-blue-600 font-bold hover:underline">Editar</button>
+                  <span className="text-slate-300">|</span>
+                  <button onClick={()=>openPassForm(r.user)} className="text-xs text-amber-600 font-bold hover:underline">🔑 Contraseña</button>
+                </div>
+              </td>
             </tr>);
           })}</tbody>
         </table>
       </div>
+
+      {/* Modal cambiar contraseña */}
+      {showPassForm&&(
+        <Modal title={`Contraseña — ${showPassForm}`} onClose={()=>setShowPassForm(null)}>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 font-semibold">
+            🔑 Asigna o cambia la contraseña para este usuario. Mínimo 6 caracteres.
+          </div>
+          {passSaved&&<div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3 text-emerald-700 font-bold text-sm">✅ Contraseña guardada correctamente</div>}
+          {passError&&<div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 font-semibold text-sm">⚠️ {passError}</div>}
+          <Field label="Nueva contraseña">
+            <div className="relative">
+              <input type={showPassVal?"text":"password"} value={newPass} onChange={e=>{setNewPass(e.target.value);setPassError("");}}
+                placeholder="Mínimo 6 caracteres"
+                className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full pr-10"/>
+              <button type="button" onClick={()=>setShowPassVal(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">{showPassVal?"🙈":"👁"}</button>
+            </div>
+          </Field>
+          <Field label="Confirmar contraseña">
+            <div className="relative">
+              <input type={showPassVal?"text":"password"} value={newPass2} onChange={e=>{setNewPass2(e.target.value);setPassError("");}}
+                placeholder="Repite la contraseña"
+                className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full pr-10"/>
+            </div>
+          </Field>
+          {/* Indicador de fortaleza */}
+          {newPass.length>0&&(
+            <div className="space-y-1">
+              <div className="flex gap-1">
+                {[1,2,3,4].map(n=>(
+                  <div key={n} className={`flex-1 h-1.5 rounded-full transition-all ${
+                    newPass.length>=8&&n<=4?"bg-emerald-500":
+                    newPass.length>=6&&n<=3?"bg-amber-400":
+                    newPass.length>=4&&n<=2?"bg-orange-400":
+                    n<=1?"bg-red-400":"bg-slate-200"
+                  }`}/>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400">
+                {newPass.length<4?"Muy corta":newPass.length<6?"Corta":newPass.length<8?"Aceptable":"Fuerte"}
+              </p>
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Btn onClick={savePassword}>Guardar contraseña</Btn>
+            <Btn variant="secondary" onClick={()=>setShowPassForm(null)}>Cancelar</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal editar usuario */}
       {showForm&&(
         <Modal title={selected?"Editar Usuario":"Nuevo Usuario"} onClose={()=>setShowForm(false)} wide>
           <PhotoPicker value={form.photo} onChange={v=>setForm(f=>({...f,photo:v}))}/>
           <Field label="Vincular a empleado"><Select value={form.staffId} onChange={e=>{const emp=data.staff.find(x=>x.id===e.target.value);setForm(f=>({...f,staffId:e.target.value,name:emp?emp.name:f.name,dept:emp?emp.dept:f.dept}));}}><option value="">—</option>{data.staff.map(e=><option key={e.id} value={e.id}>{e.name} ({e.category})</option>)}</Select></Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Nombre"><Input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></Field>
-            <Field label="Correo"><Input type="email" value={form.user} onChange={e=>setForm(f=>({...f,user:e.target.value}))}/></Field>
+            <Field label="Correo (usuario de acceso)"><Input type="email" value={form.user} onChange={e=>setForm(f=>({...f,user:e.target.value}))}/></Field>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Rol"><Select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>{Object.keys(BASE_PERMS).map(r=><option key={r}>{r}</option>)}</Select></Field>
@@ -1510,6 +2173,9 @@ function Roles({data,setData}){
             </div>
           </div>
           <Field label="Estado"><Select value={form.active?"Activo":"Inactivo"} onChange={e=>setForm(f=>({...f,active:e.target.value==="Activo"}))}><option>Activo</option><option>Inactivo</option></Select></Field>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 font-semibold">
+            💡 Después de guardar, usa el botón <strong>🔑 Contraseña</strong> en la tabla para asignar la contraseña de acceso.
+          </div>
           <div className="flex gap-3 pt-2"><Btn onClick={save}>Guardar</Btn><Btn variant="secondary" onClick={()=>setShowForm(false)}>Cancelar</Btn></div>
         </Modal>
       )}
@@ -1517,19 +2183,905 @@ function Roles({data,setData}){
   );
 }
 
-function Reports({data}){
+// ── Función central de impresión ─────────────────────────────────────────────
+function printReport(hospital, title, htmlContent) {
+  const h = hospital || {};
+  const logoHtml = h.logo
+    ? `<img src="${h.logo}" style="width:60px;height:60px;object-fit:contain;border-radius:10px;background:#f1f5f9;padding:4px">`
+    : `<div style="width:60px;height:60px;border-radius:10px;background:#0f2a56;display:flex;align-items:center;justify-content:center;color:white;font-size:26px;font-weight:900;flex-shrink:0">${h.name?.[0]||"H"}</div>`;
+
+  const header = `
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #0f2a56;padding-bottom:14px;margin-bottom:20px">
+      ${logoHtml}
+      <div style="flex:1">
+        <div style="font-size:20px;font-weight:900;color:#0f2856">${h.name||"HospitalSYS"}</div>
+        ${h.slogan?`<div style="font-size:13px;color:#64748b;font-style:italic">${h.slogan}</div>`:""}
+        ${h.address?`<div style="font-size:12px;color:#94a3b8">${h.address}</div>`:""}
+        ${h.phone?`<div style="font-size:12px;color:#94a3b8">Tel: ${h.phone}${h.email?` · ${h.email}`:""}</div>`:""}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;color:#94a3b8">Fecha de impresión</div>
+        <div style="font-size:13px;font-weight:700;color:#334155">${new Date().toLocaleDateString("es-GT")}</div>
+      </div>
+    </div>
+    <div style="font-size:17px;font-weight:900;color:#1e293b;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">${title}</div>
+  `;
+
+  const styles = `
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;padding:28px;max-width:900px;margin:0 auto}
+      table{width:100%;border-collapse:collapse;margin-bottom:16px}
+      th{background:#0f2a56;color:#bfdbfe;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;text-align:left;font-weight:700}
+      td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
+      tr:hover td{background:#f8fafc}
+      .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700}
+      .section{font-size:14px;font-weight:800;color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin:16px 0 10px}
+      .stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+      .stat-label{color:#64748b}.stat-val{font-weight:700;color:#1e293b}
+      .highlight{color:#1d4ed8;font-weight:800}
+      .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+      .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+      .kv{background:#f8fafc;border-radius:8px;padding:8px 12px;border:1px solid #e2e8f0}
+      .kv-label{font-size:10px;text-transform:uppercase;color:#94a3b8;font-weight:700}
+      .kv-val{font-size:13px;font-weight:700;color:#1e293b;margin-top:2px}
+      .card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;text-align:center}
+      .card-num{font-size:28px;font-weight:900;color:#0369a1}
+      .card-label{font-size:11px;color:#64748b;font-weight:600;margin-top:2px}
+      .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}
+      @media print{button{display:none!important}}
+    </style>
+  `;
+
+  const footer = `<div class="footer"><span>${h.name||"HospitalSYS"} ${h.phone?`· Tel: ${h.phone}`:""}</span><span>Documento generado el ${new Date().toLocaleDateString("es-GT")}</span></div>`;
+
+  const w = window.open("", "_blank", "width=900,height=700");
+  if(!w) { alert("Por favor permite ventanas emergentes para imprimir."); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>${styles}</head><body>
+    ${header}${htmlContent}${footer}
+    <div style="text-align:center;margin-top:20px"><button onclick="window.print()" style="background:#0f2a56;color:white;border:none;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir / Guardar PDF</button></div>
+  </body></html>`);
+  w.document.close();
+}
+
+// ── PrintBtn simple ──────────────────────────────────────────────────────────
+function PrintBtn({label="🖨️ Imprimir PDF", onClick}){
+  return(
+    <button
+      type="button"
+      onClick={onClick||(() => window.print())}
+      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REPORTES — módulo completo con impresión por sección
+// ══════════════════════════════════════════════════════════════════════════════
+function Reports({data,hospital}){
+  const [tab,setTab]=useState("general");
+  const [selPatient,setSelPatient]=useState("");
+  const [selDoctor,setSelDoctor]=useState("");
+  const [selStaff,setSelStaff]=useState("");
+  const [dateFrom,setDateFrom]=useState("");
+  const [dateTo,setDateTo]=useState("");
+
+  const doctors=data.staff.filter(e=>e.category==="Médico");
   const totalSal=data.staff.filter(e=>e.status==="Activo").reduce((a,e)=>a+Number(e.salary),0);
   const totalCobrado=data.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0);
   const totalCredits=data.returns.filter(r=>r.status==="Aprobada").reduce((a,r)=>a+Number(r.credit||0),0);
-  const stats=[{l:"Pacientes registrados",v:data.patients.length},{l:"Consultas registradas",v:data.consultations.length},{l:"Recetas emitidas",v:data.prescriptions.length},{l:"Laboratorios",v:data.lab.length},{l:"Planilla mensual",v:Qtz(totalSal)},{l:"Ingresos cobrados",v:Qtz(totalCobrado)},{l:"Crédito devoluciones",v:Qtz(totalCredits)},{l:"Clínicas activas",v:data.clinics.filter(c=>c.status==="Activa").length}];
-  return(
-    <div className="space-y-5 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Reportes</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">{stats.map(s=><div key={s.l} className="bg-white rounded-2xl shadow border border-slate-100 p-5"><div className="text-xl sm:text-2xl font-extrabold text-blue-700">{s.v}</div><div className="text-xs text-slate-500 mt-2 font-semibold">{s.l}</div></div>)}</div>
-      <div className="bg-white rounded-2xl shadow border border-slate-100 p-5">
-        <h3 className="font-bold text-slate-700 mb-4">Ingresos por Semana</h3>
-        <div className="flex items-end gap-2 h-32">{[32,28,41,47].map((v,i)=><div key={i} className="flex-1 flex flex-col items-center gap-1"><span className="text-xs text-slate-500 font-semibold">{v}</span><div className="w-full bg-blue-500 rounded-t" style={{height:`${(v/50)*100}%`}}/><span className="text-xs text-slate-400 font-semibold">S{i+1}</span></div>)}</div>
+
+  const inRange=d=>{if(!d)return true;if(dateFrom&&d<dateFrom)return false;if(dateTo&&d>dateTo)return false;return true;};
+
+  const TABS=[
+    {id:"general",  label:"General",        icon:"📊"},
+    {id:"patient",  label:"Por Paciente",    icon:"👤"},
+    {id:"doctor",   label:"Por Médico",      icon:"🩺"},
+    {id:"lab",      label:"Laboratorio",     icon:"🧪"},
+    {id:"payments", label:"Pagos",           icon:"💳"},
+    {id:"staff",    label:"Ficha Personal",  icon:"👥"},
+    {id:"users",    label:"Usuarios",        icon:"🔐"},
+    {id:"activity", label:"Actividad",       icon:"📋"},
+  ];
+
+  const patData = selPatient ? (()=>{
+    const p=data.patients.find(x=>x.id===selPatient);if(!p)return null;
+    return{patient:p,appointments:data.appointments.filter(a=>a.patientId===selPatient&&inRange(a.date)),consultations:data.consultations.filter(c=>c.patientId===selPatient&&inRange(c.date)),prescriptions:data.prescriptions.filter(r=>r.patientId===selPatient&&inRange(r.date)),lab:data.lab.filter(l=>l.patientId===selPatient&&inRange(l.ordered)),payments:data.payments.filter(py=>py.patientId===selPatient&&inRange(py.date)),bed:data.beds.find(b=>b.patientId===selPatient)};
+  })():null;
+
+  const docData = selDoctor ? (()=>{
+    const doc=doctors.find(d=>d.id===selDoctor);if(!doc)return null;
+    return{doctor:doc,appointments:data.appointments.filter(a=>a.doctorId===selDoctor&&inRange(a.date)),consultations:data.consultations.filter(c=>c.doctorId===selDoctor&&inRange(c.date)),prescriptions:data.prescriptions.filter(r=>r.doctorId===selDoctor&&inRange(r.date)),patients:[...new Set(data.appointments.filter(a=>a.doctorId===selDoctor).map(a=>a.patient))]};
+  })():null;
+
+  const staffData = selStaff ? data.staff.find(e=>e.id===selStaff) : null;
+
+  // ── Generadores de HTML para impresión ──────────────────────────────────────
+  const genGeneral=()=>{
+    const catRows=([...new Set(data.staff.map(e=>e.category))]).map(cat=>`<tr><td>${cat}</td><td>${data.staff.filter(e=>e.category===cat&&e.status==="Activo").length}</td><td>${data.staff.filter(e=>e.category===cat&&e.status==="Inactivo").length}</td></tr>`).join("");
+    return`
+      <div class="grid4">
+        <div class="card"><div class="card-num">${data.patients.length}</div><div class="card-label">Pacientes</div></div>
+        <div class="card"><div class="card-num">${data.consultations.length}</div><div class="card-label">Consultas</div></div>
+        <div class="card"><div class="card-num">${data.prescriptions.length}</div><div class="card-label">Recetas</div></div>
+        <div class="card"><div class="card-num">${data.lab.length}</div><div class="card-label">Laboratorios</div></div>
+        <div class="card"><div class="card-num">${data.appointments.length}</div><div class="card-label">Citas</div></div>
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(totalCobrado)}</div><div class="card-label">Ingresos cobrados</div></div>
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(totalSal)}</div><div class="card-label">Planilla mensual</div></div>
+        <div class="card"><div class="card-num">${data.clinics.filter(c=>c.status==="Activa").length}</div><div class="card-label">Clínicas activas</div></div>
       </div>
+      <div class="section">Personal por categoría</div>
+      <table><tr><th>Categoría</th><th>Activos</th><th>Inactivos</th></tr>${catRows}</table>
+      <div class="section">Estado de camas</div>
+      <div class="grid2">
+        ${["Ocupada","Libre","Limpieza","Mantenimiento"].map(s=>`<div class="kv"><div class="kv-label">${s}</div><div class="kv-val">${data.beds.filter(b=>b.status===s).length}</div></div>`).join("")}
+      </div>
+    `;
+  };
+
+  const genPatient=()=>{
+    if(!patData)return"";
+    const p=patData.patient;
+    const rows=(arr,cols,fn)=>`<table><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr>${arr.map(fn).join("")}</table>`;
+    return`
+      <div class="grid4">
+        <div class="kv"><div class="kv-label">DPI</div><div class="kv-val">${p.dpi||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Edad</div><div class="kv-val">${p.age} años</div></div>
+        <div class="kv"><div class="kv-label">Sangre</div><div class="kv-val">${p.blood}</div></div>
+        <div class="kv"><div class="kv-label">Estado</div><div class="kv-val">${p.status}</div></div>
+        <div class="kv"><div class="kv-label">Médico</div><div class="kv-val">${p.doctor}</div></div>
+        <div class="kv"><div class="kv-label">Teléfono</div><div class="kv-val">${p.phone||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Cama</div><div class="kv-val">${patData.bed?.id||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Sala</div><div class="kv-val">${p.ward}</div></div>
+      </div>
+      <div class="section">Citas (${patData.appointments.length})</div>
+      ${patData.appointments.length?rows(patData.appointments,["Fecha","Hora","Doctor","Tipo","Estado"],a=>`<tr><td>${a.date}</td><td>${a.time}</td><td>${a.doctor}</td><td>${a.type}</td><td>${a.status}</td></tr>`):"<p style='color:#94a3b8'>Sin citas registradas</p>"}
+      <div class="section">Consultas (${patData.consultations.length})</div>
+      ${patData.consultations.length?rows(patData.consultations,["Fecha","Médico","Diagnóstico","Tratamiento"],c=>`<tr><td>${c.date}</td><td>${c.doctor}</td><td>${c.diagnostico||"—"}</td><td>${c.tratamiento||"—"}</td></tr>`):"<p style='color:#94a3b8'>Sin consultas</p>"}
+      <div class="section">Laboratorios (${patData.lab.length})</div>
+      ${patData.lab.length?rows(patData.lab,["Fecha","Prueba","Resultado","Costo"],l=>`<tr><td>${l.ordered}</td><td>${l.test}</td><td>${l.result||"—"}</td><td>${Qtz(l.cost)}</td></tr>`):"<p style='color:#94a3b8'>Sin laboratorios</p>"}
+      <div class="section">Recetas (${patData.prescriptions.length})</div>
+      ${patData.prescriptions.length?rows(patData.prescriptions,["Fecha","Médico","Diagnóstico","Medicamentos"],r=>`<tr><td>${r.date}</td><td>${r.doctor}</td><td>${r.dx}</td><td>${r.items.map(i=>i.drug).join(", ")}</td></tr>`):"<p style='color:#94a3b8'>Sin recetas</p>"}
+      <div class="section">Pagos (${patData.payments.length})</div>
+      ${patData.payments.length?rows(patData.payments,["Fecha","Concepto","Método","Monto","Estado"],py=>`<tr><td>${py.date}</td><td>${py.concept}</td><td>${py.method}</td><td class="highlight">${Qtz(py.amount)}</td><td>${py.status}</td></tr>`)+"<div class='stat-row'><span class='stat-label'>TOTAL PAGADO</span><span class='stat-val highlight'>${Qtz(patData.payments.filter(p=>p.status==='Pagado').reduce((a,p)=>a+Number(p.amount),0))}</span></div>":"<p style='color:#94a3b8'>Sin pagos</p>"}
+    `.replace(/\$\{Qtz\(patData\.payments[^}]+\)\}/,Qtz(patData.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0)));
+  };
+
+  const genDoctor=()=>{
+    if(!docData)return"";
+    const doc=docData.doctor;
+    return`
+      <div class="grid4">
+        <div class="kv"><div class="kv-label">Colegiado</div><div class="kv-val">${doc.colegiado}</div></div>
+        <div class="kv"><div class="kv-label">Especialidad</div><div class="kv-val">${doc.specialty}</div></div>
+        <div class="kv"><div class="kv-label">Depto.</div><div class="kv-val">${doc.dept}</div></div>
+        <div class="kv"><div class="kv-label">Turno(s)</div><div class="kv-val">${(doc.shifts||[]).map(s=>s.split(" (")[0]).join(", ")||"—"}</div></div>
+      </div>
+      <div class="grid4">
+        <div class="card"><div class="card-num">${docData.appointments.length}</div><div class="card-label">Citas</div></div>
+        <div class="card"><div class="card-num">${docData.consultations.length}</div><div class="card-label">Consultas</div></div>
+        <div class="card"><div class="card-num">${docData.prescriptions.length}</div><div class="card-label">Recetas</div></div>
+        <div class="card"><div class="card-num">${docData.patients.length}</div><div class="card-label">Pacientes únicos</div></div>
+      </div>
+      <div class="section">Citas (${docData.appointments.length})</div>
+      ${docData.appointments.length?`<table><tr><th>Fecha</th><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Estado</th></tr>${docData.appointments.map(a=>`<tr><td>${a.date}</td><td>${a.time}</td><td>${a.patient}</td><td>${a.type}</td><td>${a.status}</td></tr>`).join("")}</table>`:"<p style='color:#94a3b8'>Sin citas</p>"}
+      <div class="section">Consultas (${docData.consultations.length})</div>
+      ${docData.consultations.length?`<table><tr><th>Fecha</th><th>Paciente</th><th>Diagnóstico</th></tr>${docData.consultations.map(c=>`<tr><td>${c.date}</td><td>${c.patient}</td><td>${c.diagnostico||"—"}</td></tr>`).join("")}</table>`:"<p style='color:#94a3b8'>Sin consultas</p>"}
+      <div class="section">Pacientes atendidos</div>
+      <p>${docData.patients.map(p=>`<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:2px;display:inline-block">${p}</span>`).join(" ")}</p>
+    `;
+  };
+
+  const genLab=()=>{
+    const filtered=data.lab.filter(l=>inRange(l.ordered));
+    const total=filtered.reduce((a,l)=>a+Number(l.cost||0),0);
+    return`
+      <div class="grid4">
+        ${["Completado","En proceso","Pendiente"].map(s=>`<div class="card"><div class="card-num">${filtered.filter(l=>l.status===s).length}</div><div class="card-label">${s}</div></div>`).join("")}
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(total)}</div><div class="card-label">Total facturado</div></div>
+      </div>
+      <table><tr><th>ID</th><th>Paciente</th><th>Prueba</th><th>Fecha</th><th>Técnico</th><th>Estado</th><th>Resultado</th><th>Costo</th></tr>
+      ${filtered.map(l=>`<tr><td>${l.id}</td><td>${l.patient}</td><td>${l.test}</td><td>${l.ordered}</td><td>${l.tech||"—"}</td><td>${l.status}</td><td>${l.result||"—"}</td><td>${Qtz(l.cost)}</td></tr>`).join("")}
+      </table>
+    `;
+  };
+
+  const genPayments=()=>{
+    const filtered=data.payments.filter(p=>inRange(p.date));
+    const total=filtered.reduce((a,p)=>a+Number(p.amount),0);
+    const pagado=filtered.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0);
+    return`
+      <div class="grid4">
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(total)}</div><div class="card-label">Total facturado</div></div>
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(pagado)}</div><div class="card-label">Cobrado</div></div>
+        <div class="card"><div class="card-num" style="font-size:18px">${Qtz(total-pagado)}</div><div class="card-label">Por cobrar</div></div>
+        <div class="card"><div class="card-num">${filtered.length}</div><div class="card-label">Transacciones</div></div>
+      </div>
+      <table><tr><th>ID</th><th>Paciente</th><th>Fecha</th><th>Concepto</th><th>Método</th><th>Autorización</th><th>Monto</th><th>Estado</th></tr>
+      ${filtered.map(p=>`<tr><td>${p.id}</td><td>${p.patient}</td><td>${p.date}</td><td>${p.concept}</td><td>${p.method}</td><td>${p.authCode||"—"}</td><td class="highlight">${Qtz(p.amount)}</td><td>${p.status}</td></tr>`).join("")}
+      </table>
+    `;
+  };
+
+  const genStaff=()=>{
+    if(!staffData)return"";
+    const s=staffData;
+    return`
+      <div class="grid4">
+        <div class="kv"><div class="kv-label">ID</div><div class="kv-val">${s.id}</div></div>
+        <div class="kv"><div class="kv-label">DPI</div><div class="kv-val">${s.dpi||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Categoría</div><div class="kv-val">${s.category}</div></div>
+        <div class="kv"><div class="kv-label">Especialidad</div><div class="kv-val">${s.specialty}</div></div>
+        ${s.colegiado?`<div class="kv"><div class="kv-label">No. Colegiado</div><div class="kv-val">${s.colegiado}</div></div>`:""}
+        <div class="kv"><div class="kv-label">Departamento</div><div class="kv-val">${s.dept}</div></div>
+        <div class="kv"><div class="kv-label">Turno(s)</div><div class="kv-val">${(s.shifts||[]).map(x=>x.split(" (")[0]).join(", ")||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Salario</div><div class="kv-val">${Qtz(s.salary)}/mes</div></div>
+        <div class="kv"><div class="kv-label">Correo sistema</div><div class="kv-val">${s.userEmail||"—"}</div></div>
+        <div class="kv"><div class="kv-label">Estado</div><div class="kv-val">${s.status}</div></div>
+      </div>
+      ${(s.clinics||[]).length?`<div class="section">Clínicas asignadas</div><p>${(s.clinics||[]).map(cid=>{const cl=data.clinics.find(c=>c.id===cid);return cl?`<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:2px;display:inline-block">${cl.name}</span>`:""}).join(" ")}</p>`:""}
+      <div style="margin-top:32px;border-top:1px solid #e2e8f0;padding-top:16px;display:flex;justify-content:space-between">
+        <div><div style="font-size:11px;color:#94a3b8">Firma del empleado</div><div style="margin-top:24px;border-top:1px solid #94a3b8;width:180px"></div></div>
+        <div><div style="font-size:11px;color:#94a3b8">Firma del jefe inmediato</div><div style="margin-top:24px;border-top:1px solid #94a3b8;width:180px"></div></div>
+      </div>
+    `;
+  };
+
+  const genUsers=()=>`
+    <table><tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Departamento</th><th>Estado</th></tr>
+    ${data.roles.map(r=>`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.user}</td><td>${r.role}</td><td>${r.dept}</td><td>${r.active?"Activo":"Inactivo"}</td></tr>`).join("")}
+    </table>
+  `;
+
+  const genActivity=()=>[
+    {t:"Últimas citas",items:data.appointments.slice(-8).reverse(),fn:a=>`${a.date} ${a.time} — ${a.patient} con ${a.doctor} (${a.status})`},
+    {t:"Últimas consultas",items:data.consultations.slice(-8).reverse(),fn:c=>`${c.date} — ${c.patient} — ${c.doctor} — Dx: ${c.diagnostico||"—"}`},
+    {t:"Últimas recetas",items:data.prescriptions.slice(-8).reverse(),fn:r=>`${r.date} — ${r.patient} — ${r.items.length} medicamento(s)`},
+    {t:"Últimos pagos",items:data.payments.slice(-8).reverse(),fn:p=>`${p.date} — ${p.patient} — ${Qtz(p.amount)} (${p.status})`},
+    {t:"Últimos laboratorios",items:data.lab.slice(-8).reverse(),fn:l=>`${l.ordered} — ${l.patient} — ${l.test} (${l.status})`},
+    {t:"Órdenes de compra recientes",items:(data.purchases||[]).slice(-8).reverse(),fn:p=>`${p.date} — ${p.supplier} — ${Qtz(p.total)} (${p.status})`},
+  ].map(s=>`<div class="section">${s.t}</div>${s.items.length?`<table>${s.items.map(i=>`<tr><td>▸ ${s.fn(i)}</td></tr>`).join("")}</table>`:"<p style='color:#94a3b8'>Sin registros</p>"}`).join("");
+
+  // ── Mapa de impresión por tab ─────────────────────────────────────────────
+  const printCurrent=()=>{
+    const map={
+      general:  ["Reporte General del Hospital", genGeneral],
+      patient:  [patData?`Expediente: ${patData.patient.name}`:"Selecciona un paciente", patData?genPatient:null],
+      doctor:   [docData?`Reporte Médico: ${docData.doctor.name}`:"Selecciona un médico", docData?genDoctor:null],
+      lab:      ["Reporte de Laboratorio", genLab],
+      payments: ["Reporte de Pagos", genPayments],
+      staff:    [staffData?`Ficha: ${staffData.name}`:"Selecciona un empleado", staffData?genStaff:null],
+      users:    ["Usuarios del Sistema", genUsers],
+      activity: ["Reporte de Actividad", genActivity],
+    };
+    const [title, gen] = map[tab]||[];
+    if(!gen){alert("Selecciona un registro para imprimir.");return;}
+    printReport(hospital, title, gen());
+  };
+
+  const SectionTitle=({children})=><h3 className="font-extrabold text-slate-700 text-base border-b border-slate-200 pb-2 mb-3 mt-4">{children}</h3>;
+  const StatRow=({label,value,highlight})=><div className="flex justify-between py-1.5 border-b border-slate-100"><span className="text-sm text-slate-500">{label}</span><span className={`text-sm font-bold ${highlight?"text-blue-700":"text-slate-800"}`}>{value}</span></div>;
+
+  return(
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Reportes</h2>
+        <div className="flex gap-2 flex-wrap">
+          <PrintBtn label="🖨️ Imprimir reporte actual" onClick={printCurrent}/>
+          <PrintBtn label="📊 Imprimir general" onClick={()=>printReport(hospital,"Reporte General del Hospital",genGeneral())}/>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${tab===t.id?"bg-blue-600 text-white border-blue-600":"bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtro de fechas */}
+      {["patient","doctor","lab","payments"].includes(tab)&&(
+        <div className="flex flex-wrap gap-3 items-center bg-slate-50 border border-slate-200 rounded-2xl p-3">
+          <span className="text-xs font-bold text-slate-500 uppercase">Filtrar por fecha:</span>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500"/>
+            <span className="text-slate-400 text-sm">a</span>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500"/>
+          </div>
+          {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}} className="text-xs text-red-500 font-bold hover:underline">✕ Limpiar</button>}
+        </div>
+      )}
+
+      {/* ── GENERAL ── */}
+      {tab==="general"&&(
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[["Pacientes",data.patients.length,"👤"],["Consultas",data.consultations.length,"🩻"],["Recetas",data.prescriptions.length,"📋"],["Laboratorios",data.lab.length,"🧪"],["Citas",data.appointments.length,"📅"],["Cobrado",Qtz(totalCobrado),"💳"],["Planilla",Qtz(totalSal),"💰"],["Clínicas activas",data.clinics.filter(c=>c.status==="Activa").length,"🏥"]].map(([l,v,ic])=>(
+              <div key={l} className="bg-white rounded-2xl shadow border border-slate-100 p-4"><div className="text-2xl mb-1">{ic}</div><div className="text-xl font-extrabold text-blue-700">{v}</div><div className="text-xs text-slate-500 font-semibold">{l}</div></div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl shadow border border-slate-100 p-5">
+            <h3 className="font-bold text-slate-700 mb-3">Personal por categoría</h3>
+            {[...new Set(data.staff.map(e=>e.category))].map(cat=>{const n=data.staff.filter(e=>e.category===cat).length;return(
+              <div key={cat} className="flex items-center gap-3 mb-2">
+                <span className="text-xs text-slate-500 w-44 truncate">{cat}</span>
+                <div className="flex-1 bg-slate-100 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{width:`${(n/data.staff.length)*100}%`}}/></div>
+                <span className="text-xs font-bold text-slate-700 w-4">{n}</span>
+              </div>
+            );})}
+          </div>
+        </div>
+      )}
+
+      {/* ── POR PACIENTE ── */}
+      {tab==="patient"&&(
+        <div className="space-y-4">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="flex-1 min-w-48">
+              <Field label="Seleccionar paciente">
+                <Select value={selPatient} onChange={e=>setSelPatient(e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  {data.patients.map(p=><option key={p.id} value={p.id}>{p.name} (DPI: {p.dpi||"—"})</option>)}
+                </Select>
+              </Field>
+            </div>
+            {patData&&<PrintBtn label="🖨️ Imprimir expediente" onClick={()=>printReport(hospital,`Expediente: ${patData.patient.name}`,genPatient())}/>}
+          </div>
+          {patData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["ID",patData.patient.id],["DPI",patData.patient.dpi||"—"],["Edad",patData.patient.age+"a"],["Sangre",patData.patient.blood],["Estado",patData.patient.status],["Médico",patData.patient.doctor],["Tel.",patData.patient.phone||"—"],["Cama",patData.bed?.id||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              <SectionTitle>Citas ({patData.appointments.length})</SectionTitle>
+              {patData.appointments.map(a=><StatRow key={a.id} label={`${a.date} ${a.time} — ${a.doctor}`} value={<Badge val={a.status} map={statusCita}/>}/>)}
+              {patData.appointments.length===0&&<p className="text-xs text-slate-400">Sin citas</p>}
+              <SectionTitle>Consultas ({patData.consultations.length})</SectionTitle>
+              {patData.consultations.map(c=><div key={c.id} className="py-1.5 border-b border-slate-100"><p className="text-sm font-semibold text-slate-700">{c.date} — {c.doctor}</p><p className="text-xs text-slate-500">Dx: {c.diagnostico||"—"}</p></div>)}
+              {patData.consultations.length===0&&<p className="text-xs text-slate-400">Sin consultas</p>}
+              <SectionTitle>Laboratorios ({patData.lab.length})</SectionTitle>
+              {patData.lab.map(l=><StatRow key={l.id} label={`${l.ordered} — ${l.test}`} value={l.result||"—"}/>)}
+              {patData.lab.length===0&&<p className="text-xs text-slate-400">Sin laboratorios</p>}
+              <SectionTitle>Pagos ({patData.payments.length})</SectionTitle>
+              {patData.payments.map(p=><StatRow key={p.id} label={`${p.date} — ${p.concept}`} value={Qtz(p.amount)} highlight/>)}
+              <StatRow label="TOTAL PAGADO" value={Qtz(patData.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0))} highlight/>
+            </div>
+          )}
+          {!selPatient&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">👤</div><p className="font-semibold">Selecciona un paciente para ver su expediente</p></div>}
+        </div>
+      )}
+
+      {/* ── POR MÉDICO ── */}
+      {tab==="doctor"&&(
+        <div className="space-y-4">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="flex-1 min-w-48">
+              <Field label="Seleccionar médico">
+                <Select value={selDoctor} onChange={e=>setSelDoctor(e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  {doctors.map(d=><option key={d.id} value={d.id}>{d.name} — {d.specialty}</option>)}
+                </Select>
+              </Field>
+            </div>
+            {docData&&<PrintBtn label="🖨️ Imprimir reporte" onClick={()=>printReport(hospital,`Reporte: ${docData.doctor.name}`,genDoctor())}/>}
+          </div>
+          {docData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["Colegiado",docData.doctor.colegiado],["Especialidad",docData.doctor.specialty],["Depto.",docData.doctor.dept],["Turno(s)",(docData.doctor.shifts||[]).map(s=>s.split(" (")[0]).join(", ")||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[["Citas",docData.appointments.length,"📅"],["Consultas",docData.consultations.length,"🩻"],["Recetas",docData.prescriptions.length,"📋"],["Pacientes únicos",docData.patients.length,"👥"]].map(([l,v,ic])=>(
+                  <div key={l} className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center"><div className="text-xl">{ic}</div><div className="text-2xl font-extrabold text-blue-700">{v}</div><div className="text-xs text-slate-500 font-semibold">{l}</div></div>
+                ))}
+              </div>
+              <SectionTitle>Citas ({docData.appointments.length})</SectionTitle>
+              {docData.appointments.map(a=><StatRow key={a.id} label={`${a.date} ${a.time} — ${a.patient}`} value={<Badge val={a.status} map={statusCita}/>}/>)}
+              {docData.appointments.length===0&&<p className="text-xs text-slate-400">Sin citas</p>}
+              <SectionTitle>Pacientes atendidos</SectionTitle>
+              <div className="flex flex-wrap gap-2">{docData.patients.map((p,i)=><span key={i} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{p}</span>)}</div>
+            </div>
+          )}
+          {!selDoctor&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">🩺</div><p className="font-semibold">Selecciona un médico para ver su reporte</p></div>}
+        </div>
+      )}
+
+      {/* ── LABORATORIO ── */}
+      {tab==="lab"&&(
+        <div className="space-y-4">
+          <div className="flex justify-end"><PrintBtn label="🖨️ Imprimir laboratorio" onClick={()=>printReport(hospital,"Reporte de Laboratorio",genLab())}/></div>
+          <div className="grid grid-cols-3 gap-3">
+            {["Completado","En proceso","Pendiente"].map(s=><div key={s} className="bg-white rounded-2xl shadow border border-slate-100 p-4 text-center"><div className="text-2xl font-extrabold text-blue-700">{data.lab.filter(l=>l.status===s&&inRange(l.ordered)).length}</div><div className="text-xs text-slate-500 font-semibold">{s}</div></div>)}
+          </div>
+          <Table cols={["ID","Paciente","Prueba","Fecha","Estado","Resultado","Costo"]} rows={data.lab.filter(l=>inRange(l.ordered))}
+            renderRow={l=>(<><TD><span className="font-mono text-blue-700 font-bold">{l.id}</span></TD><TD>{l.patient}</TD><TD>{l.test}</TD><TD>{l.ordered}</TD><TD><Badge val={l.status} map={statusLab}/></TD><TD><span className={l.result==="Normal"?"text-emerald-600 font-semibold":!l.result||l.result==="—"?"text-slate-400":"text-amber-600 font-semibold"}>{l.result||"—"}</span></TD><TD><span className="text-emerald-700 font-bold">{Qtz(l.cost)}</span></TD></>)}
+          />
+          <div className="bg-white rounded-xl p-4 border border-slate-200 flex justify-between"><span className="font-bold text-slate-700">Total facturado</span><span className="font-extrabold text-emerald-700">{Qtz(data.lab.filter(l=>inRange(l.ordered)).reduce((a,l)=>a+Number(l.cost||0),0))}</span></div>
+        </div>
+      )}
+
+      {/* ── PAGOS ── */}
+      {tab==="payments"&&(
+        <div className="space-y-4">
+          <div className="flex justify-end"><PrintBtn label="🖨️ Imprimir pagos" onClick={()=>printReport(hospital,"Reporte de Pagos",genPayments())}/></div>
+          <div className="grid grid-cols-3 gap-3">
+            {[["Total",data.payments.filter(p=>inRange(p.date)).reduce((a,p)=>a+Number(p.amount),0)],["Cobrado",data.payments.filter(p=>p.status==="Pagado"&&inRange(p.date)).reduce((a,p)=>a+Number(p.amount),0)],["Pendiente",data.payments.filter(p=>p.status==="Pendiente"&&inRange(p.date)).reduce((a,p)=>a+Number(p.amount),0)]].map(([l,v])=>(
+              <div key={l} className="bg-white rounded-2xl shadow border border-slate-100 p-4 text-center"><div className="text-lg font-extrabold text-blue-700">{Qtz(v)}</div><div className="text-xs text-slate-500 font-semibold">{l}</div></div>
+            ))}
+          </div>
+          <Table cols={["ID","Paciente","Fecha","Concepto","Método","Monto","Estado"]} rows={data.payments.filter(p=>inRange(p.date))}
+            renderRow={r=>(<><TD><span className="font-mono text-blue-700 font-bold">{r.id}</span></TD><TD>{r.patient}</TD><TD>{r.date}</TD><TD><span className="text-xs">{r.concept}</span></TD><TD><span className={`text-xs font-bold ${r.method==="Efectivo"?"text-emerald-700":"text-blue-700"}`}>{r.method}</span></TD><TD><span className="font-bold text-emerald-700">{Qtz(r.amount)}</span></TD><TD><Badge val={r.status} map={statusPago}/></TD></>)}
+          />
+        </div>
+      )}
+
+      {/* ── FICHA PERSONAL ── */}
+      {tab==="staff"&&(
+        <div className="space-y-4">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="flex-1 min-w-48">
+              <Field label="Seleccionar empleado">
+                <Select value={selStaff} onChange={e=>setSelStaff(e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  {data.staff.map(e=><option key={e.id} value={e.id}>{e.name} ({e.category})</option>)}
+                </Select>
+              </Field>
+            </div>
+            {staffData&&<PrintBtn label="🖨️ Imprimir ficha" onClick={()=>printReport(hospital,`Ficha de Empleado: ${staffData.name}`,genStaff())}/>}
+          </div>
+          {staffData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5">
+              <div className="flex gap-5 items-start mb-4">
+                <Avatar photo={staffData.photo} name={staffData.name} size="lg"/>
+                <div className="flex-1 space-y-1">
+                  <p className="text-2xl font-extrabold text-slate-800">{staffData.name}</p>
+                  <Badge val={staffData.category} map={catColors}/>
+                  <p className="text-slate-600">{staffData.specialty}</p>
+                  {staffData.colegiado&&<p className="text-amber-600 font-bold">Colegiado No. {staffData.colegiado}</p>}
+                  <Badge val={staffData.status} map={statusGen}/>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["ID",staffData.id],["DPI",staffData.dpi||"—"],["Departamento",staffData.dept],["Turno(s)",(staffData.shifts||[]).map(s=>s.split(" (")[0]).join(", ")||"—"],["Salario",Qtz(staffData.salary)],["Correo",staffData.userEmail||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+            </div>
+          )}
+          {!selStaff&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">👥</div><p className="font-semibold">Selecciona un empleado para ver su ficha</p></div>}
+        </div>
+      )}
+
+      {/* ── USUARIOS ── */}
+      {tab==="users"&&(
+        <div className="space-y-4">
+          <div className="flex justify-end"><PrintBtn label="🖨️ Imprimir usuarios" onClick={()=>printReport(hospital,"Usuarios del Sistema",genUsers())}/></div>
+          <div className="space-y-3">
+            {data.roles.map(r=>{
+              const emp=data.staff.find(e=>e.id===r.staffId);
+              const roleColors2={"Administrador":"bg-violet-600 text-white","Médico":"bg-blue-600 text-white","Enfermera/o":"bg-cyan-600 text-white","Secretaria/o":"bg-rose-500 text-white","Técnico Laboratorio":"bg-emerald-600 text-white","Farmacéutico":"bg-amber-500 text-white"};
+              return(
+                <div key={r.id} className="bg-white rounded-2xl shadow border border-slate-200 p-4 flex gap-4 items-center">
+                  <Avatar photo={r.photo||emp?.photo} name={r.name||r.user} size="md"/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-2 items-center mb-1"><p className="font-bold text-slate-800">{r.name}</p><Badge val={r.role} map={roleColors2}/><Badge val={r.active?"Activo":"Inactivo"} map={statusGen}/></div>
+                    <p className="text-xs text-slate-500 font-mono">{r.user}</p>
+                    <p className="text-xs text-slate-400">{r.dept}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── ACTIVIDAD ── */}
+      {tab==="activity"&&(
+        <div className="space-y-4">
+          <div className="flex justify-end"><PrintBtn label="🖨️ Imprimir actividad" onClick={()=>printReport(hospital,"Reporte de Actividad del Sistema",genActivity())}/></div>
+          <div className="space-y-3">
+            {[
+              {title:"Últimas citas",items:data.appointments.slice(-5).reverse(),fn:a=>`${a.date} ${a.time} — ${a.patient} con ${a.doctor} (${a.status})`,icon:"📅"},
+              {title:"Últimas consultas",items:data.consultations.slice(-5).reverse(),fn:c=>`${c.date} — ${c.patient} — ${c.doctor}`,icon:"🩻"},
+              {title:"Últimas recetas",items:data.prescriptions.slice(-5).reverse(),fn:r=>`${r.date} — ${r.patient} — ${r.items.length} med.`,icon:"📋"},
+              {title:"Últimos pagos",items:data.payments.slice(-5).reverse(),fn:p=>`${p.date} — ${p.patient} — ${Qtz(p.amount)} (${p.status})`,icon:"💳"},
+              {title:"Últimos laboratorios",items:data.lab.slice(-5).reverse(),fn:l=>`${l.ordered} — ${l.patient} — ${l.test} (${l.status})`,icon:"🧪"},
+            ].map(s=>(
+              <div key={s.title} className="bg-white rounded-2xl shadow border border-slate-200 p-4">
+                <h3 className="font-bold text-slate-700 mb-3">{s.icon} {s.title}</h3>
+                {s.items.length===0?<p className="text-xs text-slate-400 italic">Sin registros</p>
+                  :<div className="space-y-1">{s.items.map((item,i)=><div key={i} className="flex items-start gap-2 py-1.5 border-b border-slate-50 last:border-0"><span className="text-slate-300 text-xs mt-0.5">▸</span><span className="text-sm text-slate-600">{s.fn(item)}</span></div>)}</div>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+  const [tab,setTab]=useState("general");
+  const [selPatient,setSelPatient]=useState("");
+  const [selDoctor,setSelDoctor]=useState("");
+  const [selStaff,setSelStaff]=useState("");
+  const [selUser,setSelUser]=useState("");
+  const [dateFrom,setDateFrom]=useState("");
+  const [dateTo,setDateTo]=useState("");
+
+  const doctors=data.staff.filter(e=>e.category==="Médico");
+  const totalSal=data.staff.filter(e=>e.status==="Activo").reduce((a,e)=>a+Number(e.salary),0);
+  const totalCobrado=data.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0);
+  const totalCredits=data.returns.filter(r=>r.status==="Aprobada").reduce((a,r)=>a+Number(r.credit||0),0);
+
+  // Filtro por fecha
+  const inRange=(d)=>{
+    if(!d)return true;
+    if(dateFrom&&d<dateFrom)return false;
+    if(dateTo&&d>dateTo)return false;
+    return true;
+  };
+
+  const TABS=[
+    {id:"general",  label:"General",         icon:"📊"},
+    {id:"patient",  label:"Por Paciente",     icon:"👤"},
+    {id:"doctor",   label:"Por Médico",       icon:"🩺"},
+    {id:"lab",      label:"Laboratorio",      icon:"🧪"},
+    {id:"staff",    label:"Ficha Personal",   icon:"👥"},
+    {id:"users",    label:"Ficha Usuarios",   icon:"🔐"},
+    {id:"activity", label:"Actividad",        icon:"📋"},
+  ];
+
+  // ─ Reporte por paciente ─────────────────────────────────────────────────────
+  const patData = selPatient ? (() => {
+    const p=data.patients.find(x=>x.id===selPatient);
+    if(!p)return null;
+    return {
+      patient:p,
+      appointments: data.appointments.filter(a=>a.patientId===selPatient&&inRange(a.date)),
+      consultations: data.consultations.filter(c=>c.patientId===selPatient&&inRange(c.date)),
+      prescriptions: data.prescriptions.filter(r=>r.patientId===selPatient&&inRange(r.date)),
+      lab: data.lab.filter(l=>l.patientId===selPatient&&inRange(l.ordered)),
+      dosages: data.dosages.filter(d=>d.patientId===selPatient),
+      payments: data.payments.filter(py=>py.patientId===selPatient&&inRange(py.date)),
+      bed: data.beds.find(b=>b.patientId===selPatient),
+    };
+  })() : null;
+
+  // ─ Reporte por médico ────────────────────────────────────────────────────────
+  const docData = selDoctor ? (() => {
+    const doc=doctors.find(d=>d.id===selDoctor);
+    if(!doc)return null;
+    const docName=doc.name;
+    return {
+      doctor:doc,
+      appointments: data.appointments.filter(a=>a.doctorId===selDoctor&&inRange(a.date)),
+      consultations: data.consultations.filter(c=>c.doctorId===selDoctor&&inRange(c.date)),
+      prescriptions: data.prescriptions.filter(r=>r.doctorId===selDoctor&&inRange(r.date)),
+      patients: [...new Set(data.appointments.filter(a=>a.doctorId===selDoctor).map(a=>a.patient))],
+      surgeries: data.surgeries.filter(s=>s.surgeonId===selDoctor),
+    };
+  })() : null;
+
+  // ─ Ficha personal ───────────────────────────────────────────────────────────
+  const staffData = selStaff ? data.staff.find(e=>e.id===selStaff) : null;
+
+  // ─ Ficha usuario ────────────────────────────────────────────────────────────
+  const userData = selUser ? data.roles.find(r=>r.id===selUser) : null;
+
+  const SectionTitle=({children})=><h3 className="font-extrabold text-slate-700 text-base border-b border-slate-200 pb-2 mb-3 mt-4">{children}</h3>;
+  const StatRow=({label,value,highlight})=><div className="flex justify-between py-1.5 border-b border-slate-100"><span className="text-sm text-slate-500">{label}</span><span className={`text-sm font-bold ${highlight?"text-blue-700":"text-slate-800"}`}>{value}</span></div>;
+
+  return(
+    <div className="space-y-5">
+      {/* Cabecera print */}
+      <style>{`@media print{.print\\:hidden{display:none!important}.hidden.print\\:flex,.hidden.print\\:block{display:flex!important}body{font-family:sans-serif}}`}</style>
+      <PrintHeader hospital={hospital}/>
+
+      <div className="flex flex-wrap justify-between items-center gap-2 print:hidden">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">Reportes</h2>
+        <PrintBtn/>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${tab===t.id?"bg-blue-600 text-white border-blue-600":"bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtro de fechas */}
+      {["patient","doctor","lab"].includes(tab)&&(
+        <div className="flex flex-wrap gap-3 items-center bg-slate-50 border border-slate-200 rounded-2xl p-3 print:hidden">
+          <span className="text-xs font-bold text-slate-500 uppercase">Filtrar por fecha:</span>
+          <div className="flex gap-2 items-center">
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500"/>
+            <span className="text-slate-400 text-sm">a</span>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500"/>
+          </div>
+          {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}} className="text-xs text-red-500 font-bold hover:underline">✕ Limpiar</button>}
+        </div>
+      )}
+
+      {/* ── GENERAL ── */}
+      {tab==="general"&&(
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ["Pacientes",data.patients.length,"👤"],
+              ["Consultas",data.consultations.length,"🩻"],
+              ["Recetas",data.prescriptions.length,"📋"],
+              ["Laboratorios",data.lab.length,"🧪"],
+              ["Citas",data.appointments.length,"📅"],
+              ["Pagos recibidos",Qtz(totalCobrado),"💳"],
+              ["Planilla mensual",Qtz(totalSal),"💰"],
+              ["Créditos dev.",Qtz(totalCredits),"↩️"],
+            ].map(([l,v,ic])=>(
+              <div key={l} className="bg-white rounded-2xl shadow border border-slate-100 p-4">
+                <div className="text-2xl mb-1">{ic}</div>
+                <div className="text-xl font-extrabold text-blue-700">{v}</div>
+                <div className="text-xs text-slate-500 font-semibold">{l}</div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl shadow border border-slate-100 p-5">
+            <h3 className="font-bold text-slate-700 mb-3">Distribución de personal por categoría</h3>
+            {[...new Set(data.staff.map(e=>e.category))].map(cat=>{
+              const n=data.staff.filter(e=>e.category===cat).length;
+              return(
+                <div key={cat} className="flex items-center gap-3 mb-2">
+                  <span className="text-xs text-slate-500 w-40 truncate">{cat}</span>
+                  <div className="flex-1 bg-slate-100 rounded-full h-3"><div className="bg-blue-500 h-3 rounded-full" style={{width:`${(n/data.staff.length)*100}%`}}/></div>
+                  <span className="text-xs font-bold text-slate-700 w-4">{n}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="bg-white rounded-2xl shadow border border-slate-100 p-5">
+            <h3 className="font-bold text-slate-700 mb-3">Estado de camas</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {["Ocupada","Libre","Limpieza"].map(s=><div key={s} className="text-center bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="text-2xl font-extrabold text-blue-700">{data.beds.filter(b=>b.status===s).length}</div><div className="text-xs text-slate-500 font-semibold">{s}</div></div>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── POR PACIENTE ── */}
+      {tab==="patient"&&(
+        <div className="space-y-4">
+          <div className="print:hidden">
+            <Field label="Seleccionar paciente">
+              <Select value={selPatient} onChange={e=>setSelPatient(e.target.value)}>
+                <option value="">— Seleccionar paciente —</option>
+                {data.patients.map(p=><option key={p.id} value={p.id}>{p.name} (DPI: {p.dpi||"—"})</option>)}
+              </Select>
+            </Field>
+          </div>
+          {patData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-2 print:shadow-none print:border-0">
+              <div className="flex justify-between items-start print:hidden">
+                <h3 className="font-extrabold text-slate-800 text-lg">Expediente: {patData.patient.name}</h3>
+                <PrintBtn label="🖨️ Imprimir expediente"/>
+              </div>
+              {/* Info básica */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["ID",patData.patient.id],["DPI",patData.patient.dpi||"—"],["Edad",patData.patient.age+"a"],["Sangre",patData.patient.blood],["Estado",patData.patient.status],["Médico",patData.patient.doctor],["Tel.",patData.patient.phone||"—"],["Cama",patData.bed?.id||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              <SectionTitle>Citas ({patData.appointments.length})</SectionTitle>
+              {patData.appointments.map(a=><StatRow key={a.id} label={`${a.date} ${a.time} — ${a.doctor}`} value={<Badge val={a.status} map={statusCita}/>}/>)}
+              {patData.appointments.length===0&&<p className="text-xs text-slate-400">Sin citas registradas</p>}
+              <SectionTitle>Consultas ({patData.consultations.length})</SectionTitle>
+              {patData.consultations.map(c=><div key={c.id} className="py-1.5 border-b border-slate-100"><p className="text-sm font-semibold text-slate-700">{c.date} — {c.doctor}</p><p className="text-xs text-slate-500">Dx: {c.diagnostico||"—"}</p></div>)}
+              {patData.consultations.length===0&&<p className="text-xs text-slate-400">Sin consultas</p>}
+              <SectionTitle>Recetas ({patData.prescriptions.length})</SectionTitle>
+              {patData.prescriptions.map(r=><div key={r.id} className="py-1.5 border-b border-slate-100"><p className="text-sm font-semibold text-slate-700">{r.date} — {r.doctor} — Dx: {r.dx}</p><p className="text-xs text-slate-500">{r.items.map(i=>i.drug).join(", ")}</p></div>)}
+              {patData.prescriptions.length===0&&<p className="text-xs text-slate-400">Sin recetas</p>}
+              <SectionTitle>Laboratorios ({patData.lab.length})</SectionTitle>
+              {patData.lab.map(l=><StatRow key={l.id} label={`${l.ordered} — ${l.test}`} value={l.result||"—"}/>)}
+              {patData.lab.length===0&&<p className="text-xs text-slate-400">Sin laboratorios</p>}
+              <SectionTitle>Pagos ({patData.payments.length})</SectionTitle>
+              {patData.payments.map(p=><StatRow key={p.id} label={`${p.date} — ${p.concept}`} value={Qtz(p.amount)} highlight/>)}
+              <StatRow label="TOTAL PAGADO" value={Qtz(patData.payments.filter(p=>p.status==="Pagado").reduce((a,p)=>a+Number(p.amount),0))} highlight/>
+            </div>
+          )}
+          {!selPatient&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">👤</div><p className="font-semibold">Selecciona un paciente para ver su expediente completo</p></div>}
+        </div>
+      )}
+
+      {/* ── POR MÉDICO ── */}
+      {tab==="doctor"&&(
+        <div className="space-y-4">
+          <div className="print:hidden">
+            <Field label="Seleccionar médico">
+              <Select value={selDoctor} onChange={e=>setSelDoctor(e.target.value)}>
+                <option value="">— Seleccionar —</option>
+                {doctors.map(d=><option key={d.id} value={d.id}>{d.name} — {d.specialty} (Col.{d.colegiado})</option>)}
+              </Select>
+            </Field>
+          </div>
+          {docData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 space-y-2 print:shadow-none print:border-0">
+              <div className="flex justify-between items-start print:hidden">
+                <h3 className="font-extrabold text-slate-800 text-lg">Reporte: {docData.doctor.name}</h3>
+                <PrintBtn label="🖨️ Imprimir reporte"/>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["Colegiado",docData.doctor.colegiado],["Especialidad",docData.doctor.specialty],["Depto.",docData.doctor.dept],["Turno(s)",(docData.doctor.shifts||[]).map(s=>s.split(" (")[0]).join(", ")||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[["Citas",docData.appointments.length,"📅"],["Consultas",docData.consultations.length,"🩻"],["Recetas",docData.prescriptions.length,"📋"],["Pacientes únicos",docData.patients.length,"👥"]].map(([l,v,ic])=>(
+                  <div key={l} className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center"><div className="text-xl">{ic}</div><div className="text-2xl font-extrabold text-blue-700">{v}</div><div className="text-xs text-slate-500 font-semibold">{l}</div></div>
+                ))}
+              </div>
+              <SectionTitle>Citas ({docData.appointments.length})</SectionTitle>
+              {docData.appointments.map(a=><StatRow key={a.id} label={`${a.date} — ${a.patient}`} value={<Badge val={a.status} map={statusCita}/>}/>)}
+              {docData.appointments.length===0&&<p className="text-xs text-slate-400">Sin citas</p>}
+              <SectionTitle>Consultas ({docData.consultations.length})</SectionTitle>
+              {docData.consultations.map(c=><div key={c.id} className="py-1.5 border-b border-slate-100"><p className="text-sm font-semibold text-slate-700">{c.date} — {c.patient}</p><p className="text-xs text-slate-500">Dx: {c.diagnostico||"—"}</p></div>)}
+              <SectionTitle>Recetas emitidas ({docData.prescriptions.length})</SectionTitle>
+              {docData.prescriptions.map(r=><div key={r.id} className="py-1.5 border-b border-slate-100"><p className="text-sm font-semibold text-slate-700">{r.date} — {r.patient}</p><p className="text-xs text-slate-500">{r.items.map(i=>i.drug).join(", ")}</p></div>)}
+              <SectionTitle>Pacientes atendidos</SectionTitle>
+              <div className="flex flex-wrap gap-2">{docData.patients.map((p,i)=><span key={i} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{p}</span>)}</div>
+            </div>
+          )}
+          {!selDoctor&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">🩺</div><p className="font-semibold">Selecciona un médico para ver su reporte</p></div>}
+        </div>
+      )}
+
+      {/* ── LABORATORIO ── */}
+      {tab==="lab"&&(
+        <div className="space-y-4">
+          <div className="flex justify-between items-center print:hidden">
+            <p className="text-slate-600 text-sm font-semibold">Todos los exámenes de laboratorio registrados</p>
+            <PrintBtn label="🖨️ Imprimir"/>
+          </div>
+          <PrintHeader hospital={hospital}/>
+          <p className="hidden print:block text-lg font-extrabold text-slate-800 mb-4">Reporte de Laboratorio</p>
+          <div className="grid grid-cols-3 gap-3 print:hidden">
+            {["Completado","En proceso","Pendiente"].map(s=><div key={s} className="bg-white rounded-2xl shadow border border-slate-100 p-4 text-center"><div className="text-2xl font-extrabold text-blue-700">{data.lab.filter(l=>l.status===s).length}</div><div className="text-xs text-slate-500 font-semibold">{s}</div></div>)}
+          </div>
+          <Table cols={["ID","Paciente","Prueba","Fecha","Técnico","Estado","Resultado","Costo"]} rows={data.lab.filter(l=>inRange(l.ordered))}
+            renderRow={l=>(<>
+              <TD><span className="font-mono text-blue-700 font-bold">{l.id}</span></TD>
+              <TD>{l.patient}</TD><TD>{l.test}</TD><TD>{l.ordered}</TD>
+              <TD><span className="text-xs text-slate-500">{l.tech||"—"}</span></TD>
+              <TD><Badge val={l.status} map={statusLab}/></TD>
+              <TD><span className={l.result==="Normal"?"text-emerald-600 font-semibold":!l.result||l.result==="—"?"text-slate-400":"text-amber-600 font-semibold"}>{l.result||"—"}</span></TD>
+              <TD><span className="text-emerald-700 font-bold">{Qtz(l.cost)}</span></TD>
+            </>)}
+          />
+          <div className="bg-white rounded-xl p-4 border border-slate-200 flex justify-between">
+            <span className="font-bold text-slate-700">Total facturado laboratorio</span>
+            <span className="font-extrabold text-emerald-700">{Qtz(data.lab.filter(l=>inRange(l.ordered)).reduce((a,l)=>a+Number(l.cost||0),0))}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── FICHA PERSONAL ── */}
+      {tab==="staff"&&(
+        <div className="space-y-4">
+          <div className="print:hidden">
+            <Field label="Seleccionar empleado">
+              <Select value={selStaff} onChange={e=>setSelStaff(e.target.value)}>
+                <option value="">— Seleccionar —</option>
+                {data.staff.map(e=><option key={e.id} value={e.id}>{e.name} ({e.category})</option>)}
+              </Select>
+            </Field>
+          </div>
+          {staffData&&(
+            <div className="bg-white rounded-2xl shadow border border-slate-200 p-5 print:shadow-none print:border-0">
+              <div className="flex justify-between items-start print:hidden mb-4">
+                <h3 className="font-extrabold text-slate-800 text-lg">Ficha de Empleado</h3>
+                <PrintBtn label="🖨️ Imprimir ficha"/>
+              </div>
+              <PrintHeader hospital={hospital}/>
+              <p className="hidden print:block text-lg font-extrabold text-slate-800 mb-4">Ficha del Empleado</p>
+              <div className="flex gap-5 items-start mb-4">
+                <Avatar photo={staffData.photo} name={staffData.name} size="lg"/>
+                <div className="flex-1 space-y-1">
+                  <p className="text-2xl font-extrabold text-slate-800">{staffData.name}</p>
+                  <Badge val={staffData.category} map={catColors}/>
+                  <p className="text-slate-600">{staffData.specialty}</p>
+                  {staffData.colegiado&&<p className="text-amber-600 font-bold">Colegiado No. {staffData.colegiado}</p>}
+                  <Badge val={staffData.status} map={statusGen}/>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {[["ID",staffData.id],["DPI",staffData.dpi||"—"],["Departamento",staffData.dept],["Turno(s)",(staffData.shifts||[]).map(s=>s.split(" (")[0]).join(", ")||"—"],["Salario",Qtz(staffData.salary)],["Correo sistema",staffData.userEmail||"—"]].map(([k,v])=>(
+                  <div key={k}><p className="text-[10px] text-slate-400 uppercase font-bold">{k}</p><p className="text-sm text-slate-800 font-semibold">{v}</p></div>
+                ))}
+              </div>
+              {(staffData.clinics||[]).length>0&&(
+                <div className="mt-3">
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-2">Clínicas asignadas</p>
+                  <div className="flex flex-wrap gap-2">{(staffData.clinics||[]).map(cid=>{const cl=data.clinics.find(c=>c.id===cid);return cl?<span key={cid} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{cl.name}</span>:null;})}</div>
+                </div>
+              )}
+            </div>
+          )}
+          {!selStaff&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl shadow border border-slate-100"><div className="text-4xl mb-2">👥</div><p className="font-semibold">Selecciona un empleado para ver su ficha</p></div>}
+        </div>
+      )}
+
+      {/* ── FICHA USUARIOS ── */}
+      {tab==="users"&&(
+        <div className="space-y-4">
+          <div className="flex justify-between items-center print:hidden">
+            <p className="text-slate-600 text-sm font-semibold">Fichas de usuarios del sistema</p>
+            <PrintBtn label="🖨️ Imprimir lista"/>
+          </div>
+          <PrintHeader hospital={hospital}/>
+          <p className="hidden print:block text-lg font-extrabold text-slate-800 mb-4">Usuarios del Sistema</p>
+          <div className="space-y-3">
+            {data.roles.map(r=>{
+              const emp=data.staff.find(e=>e.id===r.staffId);
+              const roleColors2={"Administrador":"bg-violet-600 text-white","Médico":"bg-blue-600 text-white","Enfermera/o":"bg-cyan-600 text-white","Secretaria/o":"bg-rose-500 text-white","Técnico Laboratorio":"bg-emerald-600 text-white","Farmacéutico":"bg-amber-500 text-white"};
+              return(
+                <div key={r.id} className="bg-white rounded-2xl shadow border border-slate-200 p-4 flex gap-4 items-start">
+                  <Avatar photo={r.photo||emp?.photo} name={r.name||r.user} size="md"/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-2 items-center mb-1">
+                      <p className="font-bold text-slate-800">{r.name}</p>
+                      <Badge val={r.role} map={roleColors2}/>
+                      <Badge val={r.active?"Activo":"Inactivo"} map={statusGen}/>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono">{r.user}</p>
+                    <p className="text-xs text-slate-400">{r.dept}</p>
+                    {(r.extraPerms||[]).length>0&&(
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(r.extraPerms||[]).map(p=>{const pm=ALL_EXTRA_PERMS.find(x=>x.id===p);return pm?<span key={p} className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">{pm.icon} {pm.label}</span>:null;})}
+                      </div>
+                    )}
+                  </div>
+                  {emp&&<div className="text-xs text-slate-400 hidden sm:block"><p className="font-semibold">{emp.category}</p><p>{emp.specialty}</p></div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── ACTIVIDAD / LOG ── */}
+      {tab==="activity"&&(
+        <div className="space-y-4">
+          <div className="flex justify-between items-center print:hidden">
+            <p className="text-slate-600 text-sm font-semibold">Resumen de actividad del sistema</p>
+            <PrintBtn label="🖨️ Imprimir"/>
+          </div>
+          <div className="space-y-3">
+            {[
+              {title:"Últimas citas registradas",items:data.appointments.slice(-5).reverse().map(a=>`${a.date} — ${a.patient} con ${a.doctor} (${a.status})`),icon:"📅"},
+              {title:"Últimas consultas",items:data.consultations.slice(-5).reverse().map(c=>`${c.date} — ${c.patient} — Dr. ${c.doctor}`),icon:"🩻"},
+              {title:"Últimas recetas emitidas",items:data.prescriptions.slice(-5).reverse().map(r=>`${r.date} — ${r.patient} — ${r.items.length} medicamento(s)`),icon:"📋"},
+              {title:"Últimos pagos",items:data.payments.slice(-5).reverse().map(p=>`${p.date} — ${p.patient} — ${Qtz(p.amount)} (${p.status})`),icon:"💳"},
+              {title:"Últimos exámenes de lab.",items:data.lab.slice(-5).reverse().map(l=>`${l.ordered} — ${l.patient} — ${l.test} (${l.status})`),icon:"🧪"},
+              {title:"Órdenes de compra recientes",items:(data.purchases||[]).slice(-5).reverse().map(p=>`${p.date} — ${p.supplier} — ${Qtz(p.total)} (${p.status})`),icon:"🛒"},
+            ].map(section=>(
+              <div key={section.title} className="bg-white rounded-2xl shadow border border-slate-200 p-4">
+                <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2"><span>{section.icon}</span>{section.title}</h3>
+                {section.items.length===0
+                  ?<p className="text-xs text-slate-400 italic">Sin registros</p>
+                  :<div className="space-y-1">{section.items.map((item,i)=><div key={i} className="flex items-start gap-2 py-1.5 border-b border-slate-50 last:border-0"><span className="text-slate-300 text-xs mt-0.5">▸</span><span className="text-sm text-slate-600">{item}</span></div>)}</div>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1651,101 +3203,177 @@ function Maintenance({hospital,setHospital}){
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PANTALLA DE LOGIN
-// ══════════════════════════════════════════════════════════════════════════════
-function LoginScreen({onLogin,hospital}){
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-  const [error,setError]=useState("");
-  const [showPass,setShowPass]=useState(false);
+// ── Contraseñas — guardadas en localStorage, editables desde Roles ────────────
+const DEFAULT_PASSWORDS = {
+  "admin@hospital.gt":"admin123",
+  "rmenendez@hospital.gt":"doctor123",
+  "atorres@hospital.gt":"doctor123",
+  "lcifuentes@hospital.gt":"doctor123",
+  "sperez@hospital.gt":"enfermera123",
+  "lbarrera@hospital.gt":"secretaria123",
+  "jramirez@hospital.gt":"lab123",
+  "mgodinez@hospital.gt":"farmacia123",
+};
 
-  // Contraseñas por defecto (en producción usar hash)
-  const PASSWORDS={
-    "admin@hospital.gt":"admin123",
-    "rmenendez@hospital.gt":"doctor123",
-    "atorres@hospital.gt":"doctor123",
-    "lcifuentes@hospital.gt":"doctor123",
-    "sperez@hospital.gt":"enfermera123",
-    "lbarrera@hospital.gt":"secretaria123",
-    "jramirez@hospital.gt":"lab123",
-    "mgodinez@hospital.gt":"farmacia123",
-  };
+const getPasswords = () => {
+  try {
+    const s = localStorage.getItem("hospital_passwords");
+    return s ? {...DEFAULT_PASSWORDS,...JSON.parse(s)} : {...DEFAULT_PASSWORDS};
+  } catch { return {...DEFAULT_PASSWORDS}; }
+};
 
-  const handleLogin=e=>{
-    e.preventDefault();
-    const correct=PASSWORDS[email.trim().toLowerCase()];
-    if(!correct){setError("Usuario no encontrado");return;}
-    if(correct!==password){setError("Contraseña incorrecta");return;}
+const savePasswords = (pw) => {
+  try { localStorage.setItem("hospital_passwords", JSON.stringify(pw)); } catch {}
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PANTALLA DE LOGIN — simple y robusta
+// ══════════════════════════════════════════════════════════════════════════════
+function LoginScreen({onLogin, hospital}){
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]       = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading]   = useState(false);
+
+  const doLogin = () => {
+    const em  = email.trim().toLowerCase();
+    const pw  = password;
+
+    if(!em || !pw){
+      setError("Ingresa tu correo y contraseña");
+      return;
+    }
+
+    // Leer contraseñas: primero las guardadas, luego las por defecto
+    let passwords = {...DEFAULT_PASSWORDS};
+    try {
+      const saved = localStorage.getItem("hospital_passwords");
+      if(saved) Object.assign(passwords, JSON.parse(saved));
+    } catch {}
+
+    const correct = passwords[em];
+    if(!correct){
+      setError("Usuario no encontrado. Verifica tu correo.");
+      return;
+    }
+    if(correct !== pw){
+      setError("Contraseña incorrecta. Intenta nuevamente.");
+      return;
+    }
+
+    // Login exitoso
     setError("");
-    onLogin(email.trim().toLowerCase());
+    setLoading(true);
+    try { localStorage.setItem("hospital_session", em); } catch {}
+    // Pequeño delay para que React procese el estado antes de cambiar vista
+    setTimeout(() => onLogin(em), 50);
   };
 
   return(
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:"linear-gradient(135deg,#0a1f44 0%,#0f2a56 50%,#0d3272 100%)"}}>
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4"
+         style={{background:"linear-gradient(135deg,#0a1f44 0%,#0f2a56 50%,#0d3272 100%)"}}>
+      <div className="w-full max-w-sm space-y-6">
 
-        {/* Logo / nombre hospital */}
+        {/* Logo */}
         <div className="text-center space-y-3">
-          {hospital.logo
-            ?<img src={hospital.logo} className="w-20 h-20 mx-auto rounded-2xl object-contain bg-white/10 p-2 shadow-xl"/>
-            :<div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-xl">{hospital.name?.[0]||"H"}</div>
+          {hospital?.logo
+            ? <img src={hospital.logo} className="w-20 h-20 mx-auto rounded-2xl object-contain bg-white/10 p-2 shadow-xl"/>
+            : <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-xl">
+                {hospital?.name?.[0] || "H"}
+              </div>
           }
           <div>
-            <h1 className="text-2xl font-extrabold text-white">{hospital.name||"HospitalSYS"}</h1>
-            <p className="text-blue-300 text-sm">{hospital.slogan||"Sistema de Gestión Hospitalaria"}</p>
+            <h1 className="text-2xl font-extrabold text-white">{hospital?.name || "HospitalSYS"}</h1>
+            <p className="text-blue-300 text-sm">{hospital?.slogan || "Sistema de Gestión Hospitalaria"}</p>
           </div>
         </div>
 
-        {/* Formulario */}
-        <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5">
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-4">
           <div>
             <h2 className="text-xl font-extrabold text-slate-800">Iniciar sesión</h2>
             <p className="text-slate-500 text-sm">Ingresa con tu cuenta del hospital</p>
           </div>
 
-          {error&&<div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm font-semibold flex items-center gap-2">⚠️ {error}</div>}
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-red-700 text-sm font-semibold flex items-center gap-2">
+              ⚠️ {error}
+            </div>
+          )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Correo electrónico</label>
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@hospital.gt" required
-                className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full"/>
+          {/* Correo */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Correo electrónico</label>
+            <input
+              type="text"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError(""); }}
+              onKeyDown={e => e.key === "Enter" && doLogin()}
+              placeholder="correo@hospital.gt"
+              autoComplete="username"
+              className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full"
+            />
+          </div>
+
+          {/* Contraseña */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Contraseña</label>
+            <div className="relative">
+              <input
+                type={showPass ? "text" : "password"}
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && doLogin()}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(s => !s)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg"
+              >
+                {showPass ? "🙈" : "👁"}
+              </button>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Contraseña</label>
-              <div className="relative">
-                <input type={showPass?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required
-                  className="bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-full pr-12"/>
-                <button type="button" onClick={()=>setShowPass(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg">{showPass?"🙈":"👁"}</button>
-              </div>
-            </div>
-            <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-base shadow-md transition-colors">Ingresar</button>
-          </form>
+          </div>
+
+          {/* Botón */}
+          <button
+            type="button"
+            onClick={doLogin}
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-bold text-base shadow-md transition-colors disabled:opacity-60"
+          >
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
 
           {/* Usuarios de prueba */}
-          <details className="group">
-            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 font-semibold select-none">Ver usuarios de prueba ▾</summary>
-            <div className="mt-3 space-y-1 bg-slate-50 rounded-xl p-3 border border-slate-200">
-              {[
-                ["admin@hospital.gt","admin123","Administrador"],
-                ["rmenendez@hospital.gt","doctor123","Médico"],
-                ["atorres@hospital.gt","doctor123","Médico"],
-                ["sperez@hospital.gt","enfermera123","Enfermera"],
-                ["lbarrera@hospital.gt","secretaria123","Secretaria"],
-                ["jramirez@hospital.gt","lab123","Técnico Lab"],
-                ["mgodinez@hospital.gt","farmacia123","Farmacéutico"],
-              ].map(([u,p,r])=>(
-                <button key={u} onClick={()=>{setEmail(u);setPassword(p);}} className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg transition-colors">
-                  <span className="text-xs font-bold text-blue-700">{r}</span>
-                  <span className="text-xs text-slate-500 ml-2">{u}</span>
+          <details>
+            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 font-semibold select-none text-center">
+              Ver usuarios disponibles ▾
+            </summary>
+            <div className="mt-3 bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1 max-h-48 overflow-y-auto">
+              {Object.entries(DEFAULT_PASSWORDS).map(([user, pass]) => (
+                <button
+                  key={user}
+                  type="button"
+                  onClick={() => { setEmail(user); setPassword(pass); setError(""); }}
+                  className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <span className="text-xs font-bold text-blue-700 block">{user}</span>
+                  <span className="text-xs text-slate-400">Clic para autocompletar</span>
                 </button>
               ))}
             </div>
           </details>
         </div>
 
-        {hospital.address&&<p className="text-center text-blue-300/60 text-xs">{hospital.address}</p>}
+        {hospital?.address && (
+          <p className="text-center text-blue-300/60 text-xs">{hospital.address}</p>
+        )}
       </div>
     </div>
   );
@@ -1773,22 +3401,30 @@ export default function App(){
     try{localStorage.setItem("hospital_data",JSON.stringify(newData));}catch{}
   };
 
-  // ── Autenticación ───────────────────────────────────────────────────────────
-  const [loggedUser,setLoggedUser]=useState(()=>{
-    try{return localStorage.getItem("hospital_session")||null;}catch{return null;}
+  // ── Autenticación ────────────────────────────────────────────────────────────
+  // isLoggedIn se inicializa desde localStorage y se actualiza con setState
+  // para garantizar que React re-renderice inmediatamente al hacer login/logout
+  const [isLoggedIn, setIsLoggedIn] = useState(()=>{
+    try{return !!localStorage.getItem("hospital_session");}catch{return false;}
+  });
+  const [loggedUser, setLoggedUser] = useState(()=>{
+    try{return localStorage.getItem("hospital_session")||"";}catch{return "";}
   });
 
-  const handleLogin=email=>{
+  const handleLogin = (email) => {
+    try{localStorage.setItem("hospital_session", email);}catch{}
     setLoggedUser(email);
-    try{localStorage.setItem("hospital_session",email);}catch{}
-  };
-  const handleLogout=()=>{
-    setLoggedUser(null);
-    try{localStorage.removeItem("hospital_session");}catch{}
+    setIsLoggedIn(true);   // ← dispara el re-render inmediatamente
   };
 
-  // Si no hay sesión, mostrar login
-  if(!loggedUser){
+  const handleLogout = () => {
+    try{localStorage.removeItem("hospital_session");}catch{}
+    setLoggedUser("");
+    setIsLoggedIn(false);  // ← dispara el re-render inmediatamente
+  };
+
+  // Si no hay sesión activa → mostrar login
+  if(!isLoggedIn){
     return <LoginScreen onLogin={handleLogin} hospital={hospital}/>;
   }
 
@@ -1801,7 +3437,7 @@ export default function App(){
     alerts:<AlertsPanel data={data}/>,
     patients:<Patients data={data} setData={setDataPersist}/>,
     consultations:<Consultations data={data} setData={setDataPersist}/>,
-    prescriptions:<Prescriptions data={data} setData={setDataPersist}/>,
+    prescriptions:<Prescriptions data={data} setData={setDataPersist} hospital={hospital}/>,
     appointments:<Appointments data={data} setData={setDataPersist} userPerms={userPerms}/>,
     calendar:<CalendarView data={data}/>,
     shifts:<Shifts data={data} setData={setDataPersist}/>,
@@ -1809,13 +3445,14 @@ export default function App(){
     beds:<Beds data={data} setData={setDataPersist}/>,
     icu:<ICU data={data}/>,
     surgery:<Surgery data={data}/>,
-    lab:<Lab data={data}/>,
-    pharmacy:<Pharmacy data={data}/>,
-    inventory:<Inventory data={data}/>,
+    lab:<Lab data={data} setData={setDataPersist}/>,
+    pharmacy:<Pharmacy data={data} setData={setDataPersist}/>,
+    inventory:<Inventory data={data} setData={setDataPersist}/>,
+    purchases:<Purchases data={data} setData={setDataPersist}/>,
     returns:<Returns data={data} setData={setDataPersist}/>,
     suppliers:<Suppliers data={data} setData={setDataPersist}/>,
-    payments:<Payments data={data} setData={setDataPersist}/>,
-    reports:<Reports data={data}/>,
+    payments:<Payments data={data} setData={setDataPersist} hospital={hospital}/>,
+    reports:<Reports data={data} hospital={hospital}/>,
     staff:<Staff data={data} setData={setDataPersist}/>,
     roles:<Roles data={data} setData={setDataPersist}/>,
     meds_dose:<MedsDose data={data} setData={setDataPersist}/>,
